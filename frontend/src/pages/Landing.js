@@ -67,11 +67,11 @@ const TECH_STACK = [
   { name: 'React 18', color: '#61DAFB', desc: 'Frontend' },
   { name: 'FastAPI', color: '#009688', desc: 'Backend' },
   { name: 'SQLite', color: '#0066CC', desc: 'Database' },
-  { name: 'HuggingFace', color: '#FFD21E', desc: 'AI Models' },
+  { name: 'Gemini 2.5 Flash', color: '#FFD21E', desc: 'AI Vision' },
   { name: 'Stripe', color: '#635BFF', desc: 'Payments' },
   { name: 'JWT Auth', color: '#FB923C', desc: 'Security' },
   { name: 'Google OAuth', color: '#4285F4', desc: 'Social Login' },
-  { name: 'SDXL Detector', color: '#EF4444', desc: 'Forgery AI' },
+  { name: 'Forensic AI', color: '#EF4444', desc: 'Forgery AI' },
 ];
 
 const PPT_SLIDES = [
@@ -85,7 +85,7 @@ const PPT_SLIDES = [
   },
   {
     num: '03', title: 'Architecture', color: '#22C55E',
-    bullets: ['Intake Agent: metadata + NPI validation', 'Forensics Agent: SDXL AI detector + FFT analysis', 'Clinical Agent: dosage + drug interaction checks', 'Verdict Agent: weighted ensemble decision'],
+    bullets: ['Intake Agent: metadata + NPI validation', 'Forensics Agent: Local ELA+FFT+Noise analysis', 'AI Fallback: Gemini 2.5 Flash vision model', 'Verdict Agent: weighted ensemble decision'],
   },
   {
     num: '04', title: 'Business Model', color: '#8B5CF6',
@@ -136,7 +136,7 @@ const FEATURES = [
   { icon: Lock, title: 'SHA-256 Audit Chain', desc: 'Every verification is cryptographically chained — tamper-evident compliance logs for every dispensed script.', color: '#22C55E' },
   { icon: Key, title: 'API Key Management', desc: 'Issue, rotate, and revoke API keys per team or integration. Track usage per key in real time.', color: '#8B5CF6' },
   { icon: Webhook, title: 'Webhook Support', desc: 'Push verification results to your existing systems via configurable webhooks with retry logic.', color: '#EC4899' },
-  { icon: Database, title: 'SDXL Forgery Detection', desc: 'Uses HuggingFace SDXL detector ensemble alongside FFT analysis to catch digitally generated prescriptions.', color: '#B26552' },
+  { icon: Database, title: 'Gemini AI Fallback', desc: 'Uses Gemini 2.5 Flash vision model alongside local ELA+FFT forensic analysis to catch digitally generated prescriptions.', color: '#B26552' },
 ];
 
 /* ─── Navigation ──────────────────────────────────────────────────────────── */
@@ -362,7 +362,7 @@ function JudgesSection() {
             <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-7">
               <h4 className="text-white font-semibold mb-4 flex items-center gap-2"><Cpu className="w-4 h-4 text-[#22C55E]" /> AI Pipeline</h4>
               <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
-                {['Upload', '→', 'Intake', '→', 'Forensics\n+SDXL', '→', 'Clinical', '→', 'Verdict', '→', 'Audit Chain'].map((step, i) => (
+                {['Upload', '→', 'Intake', '→', 'Forensics\n+Gemini', '→', 'Clinical', '→', 'Verdict', '→', 'Audit Chain'].map((step, i) => (
                   <React.Fragment key={i}>
                     {step === '→' ? (
                       <span className="text-white/20 text-lg">{step}</span>
