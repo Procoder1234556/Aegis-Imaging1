@@ -30,6 +30,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: str = ""
+    avatar_color: str = ""
 
 class LoginRequest(BaseModel):
     email: str
@@ -142,11 +143,12 @@ async def register(body: RegisterRequest, response: Response):
 
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         pw_hash = hash_password(body.password)
+        picture = body.avatar_color if body.avatar_color.startswith("#") else ""
         await db.execute(
             "INSERT INTO users(user_id,email,name,picture,password_hash,plan,verifications_today,created_at) "
             "VALUES(?,?,?,?,?,?,?,?)",
             (user_id, body.email.lower(), body.name or body.email.split("@")[0],
-             "", pw_hash, "free", 0, datetime.now(timezone.utc).isoformat()),
+             picture, pw_hash, "free", 0, datetime.now(timezone.utc).isoformat()),
         )
         await db.commit()
 

@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /login
+Disallow: /dashboard
+Disallow: /api-keys
+Disallow: /billing
+Disallow: /verify
+Disallow: /verifying/
+Disallow: /result/
+Disallow: /audit/
+Disallow: /processing/
+
+Sitemap: https://rxguard.ai/sitemap.xml

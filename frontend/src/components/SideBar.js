@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Shield, BarChart3, Upload, LogOut, CreditCard, FileText, User } from 'lucide-react';
+import { Shield, BarChart3, Upload, LogOut, CreditCard, Key, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
 
 const NAV = [
-  { to: '/verify',    icon: Upload,    label: 'Verify Image' },
+  { to: '/verify',    icon: Upload,    label: 'Verify Prescription' },
   { to: '/dashboard', icon: BarChart3, label: 'Dashboard' },
+  { to: '/api-keys',  icon: Key,       label: 'API Keys' },
   { to: '/billing',   icon: CreditCard,label: 'Billing' },
 ];
 
@@ -38,8 +39,8 @@ export default function SideBar() {
           <Shield className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
         <div>
-          <span className="text-white font-bold text-sm tracking-tight">Aegis</span>
-          <span className="text-aegis-blueSoft font-medium text-sm ml-1">Imaging</span>
+          <span className="text-white font-bold text-sm tracking-tight">RxGuard</span>
+          <span className="text-[#6997E4] font-medium text-sm ml-1">API</span>
         </div>
       </div>
 
@@ -71,12 +72,17 @@ export default function SideBar() {
       {/* User info */}
       {user && (
         <div className="px-4 mb-3">
-          <div className="flex items-center gap-3 px-3 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
-            {user.picture ? (
+          <div
+            className="flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer transition-all hover:bg-white/10"
+            style={{ background: 'rgba(255,255,255,0.05)' }}
+            onClick={() => navigate('/profile')}
+            data-testid="sidebar-profile-link"
+          >
+            {user.picture && user.picture.startsWith('http') ? (
               <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
             ) : (
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: 'linear-gradient(135deg,#1B47DB,#6997E4)' }}>
+                style={{ background: user.picture && user.picture.startsWith('#') ? user.picture : 'linear-gradient(135deg,#1B47DB,#6997E4)' }}>
                 {(user.name || user.email || 'U')[0].toUpperCase()}
               </div>
             )}
@@ -86,6 +92,7 @@ export default function SideBar() {
                 {(user.plan || 'free').toUpperCase()}
               </div>
             </div>
+            <User className="w-3.5 h-3.5 text-white/30 shrink-0" />
           </div>
         </div>
       )}

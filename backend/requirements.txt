@@ -11,3 +11,4 @@ aiofiles
 pydicom==3.0.2
 opencv-python-headless==4.13.0.92
 openai
+resend==2.30.1

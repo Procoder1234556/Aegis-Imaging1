@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import SideBar from './components/SideBar';
 import Landing from './pages/Landing';
@@ -16,9 +17,11 @@ import Dashboard from './pages/Dashboard';
 import AuditDetail from './pages/AuditDetail';
 import Processing from './pages/Processing';
 import Billing from './pages/Billing';
+import Profile from './pages/Profile';
+import ApiKeys from './pages/ApiKeys';
 
 /* Public routes render without sidebar */
-const PUBLIC_PATHS = ['/', '/login'];
+const PUBLIC_PATHS = ['/', '/login', '/profile'];
 
 function AppContent() {
   const location = useLocation();
@@ -32,6 +35,7 @@ function AppContent() {
           <Route path="/"              element={<Landing />} />
           <Route path="/login"         element={<Login />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/profile"       element={<Profile />} />
         </Routes>
       </AnimatePresence>
     );
@@ -45,6 +49,7 @@ function AppContent() {
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/dashboard"               element={<Dashboard />} />
+            <Route path="/api-keys"                element={<ApiKeys />} />
             <Route path="/verify"                  element={<Upload />} />
             <Route path="/verifying/:id"           element={<Verifying />} />
             <Route path="/result/approved/:id"     element={<Approved />} />
@@ -65,10 +70,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -35,12 +35,12 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const register = async (email, password, name) => {
+  const register = async (email, password, name, avatarColor = '') => {
     const r = await fetch(`${BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, name, avatar_color: avatarColor }),
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Registration failed'); }
     const data = await r.json();

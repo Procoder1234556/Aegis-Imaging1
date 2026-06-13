@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Mail, Shield, BarChart3, Key, Clock, LogOut,
   Edit3, Check, Sun, Moon, FileText, Award, TrendingUp,
-  Download, Share2, Twitter, Linkedin, Copy,
+  Download, Share2, Twitter, Linkedin, Copy, Send, X, AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -37,6 +37,10 @@ export default function Profile() {
   const [newName,   setNewName]   = useState(user?.name || '');
   const [copied,    setCopied]    = useState(false);
   const [activeTab, setActiveTab] = useState('reports');
+  const [emailModal, setEmailModal] = useState(null); // audit object or 'all'
+  const [emailTo,    setEmailTo]    = useState(user?.email || '');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailResult,  setEmailResult]  = useState('');
 
   const avatarColor = user?.picture && user.picture.startsWith('#') ? user.picture : '#1B47DB';
   const initials = user?.name ? user.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() : 'U';
@@ -75,12 +79,110 @@ export default function Profile() {
     suspicious: audits.filter(a => a.verdict === 'ESCALATE').length,
   };
 
+  const sendReportEmail = async (audit) => {
+    if (!emailTo.trim()) return;
+    setEmailSending(true); setEmailResult('');
+    try {
+      const r = await fetch(`${API_BASE}/api/email/send-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_email: emailTo.trim(),
+          audit_id: audit.audit_id,
+          verdict: audit.verdict,
+          confidence: audit.confidence || 0,
+          created_at: audit.created_at,
+          pharmacy_name: user?.name || 'Your Pharmacy',
+        }),
+      });
+      if (!r.ok) {
+        const e = await r.json();
+        throw new Error(e.detail || 'Failed to send email');
+      }
+      setEmailResult('success');
+      setTimeout(() => { setEmailModal(null); setEmailResult(''); }, 2000);
+    } catch (err) {
+      setEmailResult(err.message || 'Failed to send email');
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
     <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
       className="min-h-screen p-6" style={{ background: 'var(--color-bg)' }}>
       <div className="max-w-4xl mx-auto">
+
+      {/* Email Modal */}
+      <AnimatePresence>
+        {emailModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+            <motion.div initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.95 }}
+              className="card p-6 w-full max-w-md" data-testid="email-report-modal">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(27,71,219,0.1)' }}>
+                    <Send className="w-4 h-4" style={{ color: '#1B47DB' }} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold" style={{ color: 'var(--color-text)' }}>Email Report</h3>
+                    <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Send verification summary to email</p>
+                  </div>
+                </div>
+                <button onClick={() => setEmailModal(null)} style={{ color: 'var(--color-muted)' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {emailModal !== 'all' && (
+                <div className="p-3 rounded-xl mb-4 text-xs font-mono" style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
+                  <span style={{ color: 'var(--color-muted)' }}>Audit: </span>
+                  <span style={{ color: 'var(--color-text)' }}>{emailModal.audit_id}</span>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--color-muted)' }}>Recipient Email</label>
+                  <input
+                    type="email" value={emailTo} onChange={e => setEmailTo(e.target.value)}
+                    className="input-field" placeholder="pharmacy@example.com"
+                    data-testid="email-recipient-input" />
+                </div>
+
+                {emailResult === 'success' ? (
+                  <div className="flex items-center gap-2 p-3 rounded-xl text-sm"
+                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D' }}>
+                    <Check className="w-4 h-4" /> Report sent successfully!
+                  </div>
+                ) : emailResult ? (
+                  <div className="flex items-center gap-2 p-3 rounded-xl text-sm"
+                    style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626' }}>
+                    <AlertCircle className="w-4 h-4 shrink-0" /> {emailResult}
+                  </div>
+                ) : null}
+
+                <div className="flex gap-3">
+                  <button onClick={() => setEmailModal(null)} className="flex-1 btn-ghost py-2.5 text-sm">Cancel</button>
+                  <button
+                    onClick={() => sendReportEmail(emailModal)}
+                    disabled={emailSending || !emailTo.trim()}
+                    className="flex-1 btn-primary py-2.5 text-sm"
+                    data-testid="send-email-btn">
+                    {emailSending
+                      ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                      : <><Send className="w-3.5 h-3.5" /> Send Report</>
+                    }
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
         {/* Header row */}
         <div className="flex items-center justify-between mb-8">
@@ -230,11 +332,18 @@ export default function Profile() {
                   <button onClick={downloadReports} data-testid="download-reports-btn"
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
                     style={{ color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
-                    <Download className="w-3.5 h-3.5" /> Export
+                    <Download className="w-3.5 h-3.5" /> Export PDF
+                  </button>
+                  <button onClick={() => { setEmailTo(user?.email || ''); setEmailModal(audits[0] || null); }}
+                    disabled={!audits.length}
+                    data-testid="email-latest-report-btn"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+                    <Send className="w-3.5 h-3.5" /> Email Report
                   </button>
                   <button onClick={shareOnTwitter} data-testid="share-twitter-btn"
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
-                    style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+                    style={{ color: '#1D9BF0', border: '1px solid #BFDBFE', background: '#EFF6FF' }}>
                     <Twitter className="w-3.5 h-3.5" /> Share
                   </button>
                   <button onClick={copyProfileLink} data-testid="copy-profile-link-btn"
@@ -282,10 +391,19 @@ export default function Profile() {
                             {Math.round((a.confidence || 0) * 100)}%
                           </td>
                           <td className="px-5 py-3.5">
-                            <button onClick={() => navigate(`/audit/${a.audit_id}`)}
-                              className="text-xs font-medium" style={{ color: 'var(--color-blue)' }}>
-                              View →
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => navigate(`/audit/${a.audit_id}`)}
+                                className="text-xs font-medium" style={{ color: 'var(--color-blue)' }}>
+                                View →
+                              </button>
+                              <button
+                                onClick={() => { setEmailTo(user?.email || ''); setEmailModal(a); }}
+                                data-testid={`email-report-${a.audit_id}`}
+                                className="text-xs font-medium flex items-center gap-1"
+                                style={{ color: 'var(--color-muted)' }}>
+                                <Send className="w-3 h-3" /> Email
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

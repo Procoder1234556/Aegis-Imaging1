@@ -29,6 +29,7 @@ from db import (
 from orchestrator import AsyncOrchestrator
 from auth import router as auth_router, get_current_user, optional_user, FREE_DAILY_LIMIT
 from payments import router as payments_router
+from email_router import router as email_router
 
 app = FastAPI(title="RxGuard API", version="3.0.0", docs_url="/api/docs")
 
@@ -45,6 +46,7 @@ if Path("data").exists():
 
 app.include_router(auth_router)
 app.include_router(payments_router)
+app.include_router(email_router)
 
 orchestrator = AsyncOrchestrator()
 
