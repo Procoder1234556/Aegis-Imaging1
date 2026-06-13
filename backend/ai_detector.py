@@ -177,13 +177,12 @@ def analyze_metadata(meta: dict) -> tuple:
 
 
 # ─────────────────────────────────────────────
-# Gemini Fallback
+# Gemini Verify (called for EVERY image)
 # ─────────────────────────────────────────────
 
-async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
+async def _gemini_verify(image_bytes: bytes, filename: str) -> tuple:
     """
-    Call Gemini vision model to determine if image is AI-generated.
-    Used when local forensics yields ESCALATE (inconclusive) result.
+    Always-on Gemini image verification — called for every upload.
     Returns (result_dict, None) on success or (None, error_message) on failure.
     """
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("EMERGENT_LLM_KEY")
@@ -214,7 +213,7 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
                 "You are a forensic image analyst specializing in detecting AI-generated images. "
                 "Always respond with only valid JSON."
             ),
-        ).with_model("gemini", "gemini-3.5-flash")
+        ).with_model("gemini", "gemini-2.5-flash")
 
         image_file = FileContentWithMimeType(file_path=tmp_path, mime_type=mime_type)
 
@@ -222,7 +221,7 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
             "Examine this image carefully and determine whether it is AI-generated or a real photograph/scanned document. "
             "Consider: unnatural textures, AI diffusion artifacts, overly smooth gradients, absence of camera sensor noise, "
             "handwriting authenticity, paper/printing signs. "
-            "Respond with ONLY this JSON (no markdown, no explanation outside JSON): "
+            "Respond with ONLY this JSON (no markdown, no extra text): "
             '{"is_ai_generated": true, "confidence": 0.85, "reasoning": "brief reason"}'
         )
 
@@ -235,7 +234,6 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
             elif isinstance(ev, StreamDone):
                 break
 
-        # Extract JSON from response
         match = re.search(r'\{.*?\}', response_text, re.DOTALL)
         if match:
             parsed = json.loads(match.group())
@@ -243,20 +241,18 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
                 "is_ai_generated": bool(parsed.get("is_ai_generated", False)),
                 "confidence": float(parsed.get("confidence", 0.5)),
                 "reasoning": str(parsed.get("reasoning", "Gemini analysis complete.")),
-                "model": "gemini-3.5-flash",
+                "model": "gemini-2.5-flash",
             }, None
 
         return None, "Gemini returned an unreadable response. Please try again."
 
     except Exception as e:
         raw = str(e).lower()
-        # Detect quota / billing exhaustion
-        if any(kw in raw for kw in ["quota", "resource_exhausted", "rate limit", "billing", "insufficient funds"]):
+        if any(kw in raw for kw in ["quota", "resource_exhausted", "429", "rate limit", "billing", "insufficient"]):
             return None, "Your Gemini API key quota is exhausted. Please top up your key or replace it."
-        # Detect invalid/expired key
-        if any(kw in raw for kw in ["authenticationerror", "api_key_invalid", "api key not valid", "invalid api key", "401", "403"]):
+        if any(kw in raw for kw in ["authenticationerror", "api_key_invalid", "api key not valid", "invalid api key", "unauthenticated", "permission_denied"]):
             return None, "Your Gemini API key is invalid or expired. Please replace it."
-        print(f"[Gemini fallback error]: {e}")
+        print(f"[Gemini verify error]: {e}")
         return None, "Gemini verification is temporarily unavailable. Please try again shortly."
     finally:
         if tmp_path:
@@ -368,28 +364,21 @@ async def run_verification(
             "error":      str(e),
         }
 
-    # ── Gemini fallback on ESCALATE ─────────────────────────
-    if verdict == "ESCALATE":
-        gemini, gemini_error = await _gemini_fallback(image_bytes, filename)
-        if gemini:
-            gemini_used = True
-            if gemini["is_ai_generated"]:
-                verdict    = "REJECT"
-                confidence = round(gemini["confidence"], 3)
-                rationale  = f"Gemini AI analysis: {gemini['reasoning']}"
-            else:
-                verdict    = "APPROVE"
-                confidence = round(gemini["confidence"], 3)
-                rationale  = f"Gemini AI analysis: {gemini['reasoning']}"
-
-            forensics_json["gemini_analysis"] = gemini
-            forensics_json["model"] = f"local-forensic-v1 + {gemini['model']} (fallback)"
-        else:
-            # Gemini needed but failed — do NOT return an unverified result
-            raise HTTPException(
-                status_code=503,
-                detail=gemini_error or "Verification requires Gemini AI but it is unavailable. Please try again.",
-            )
+    # ── Gemini verify — called for EVERY image ──────────────
+    gemini, gemini_error = await _gemini_verify(image_bytes, filename)
+    if gemini:
+        gemini_used = True
+        verdict    = "REJECT" if gemini["is_ai_generated"] else "APPROVE"
+        confidence = round(gemini["confidence"], 3)
+        rationale  = f"Gemini AI: {gemini['reasoning']}"
+        forensics_json["gemini_analysis"] = gemini
+        forensics_json["model"] = f"gemini-2.5-flash + local-forensic-v1"
+    else:
+        # Gemini unavailable — do NOT return an unverified result
+        raise HTTPException(
+            status_code=503,
+            detail=gemini_error or "Gemini verification unavailable. Please try again.",
+        )
 
     latency_ms = round((time.time() - t0) * 1000)
 
