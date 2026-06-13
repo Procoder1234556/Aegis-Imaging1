@@ -1,0 +1,119 @@
+{
+  "theme_and_archetype": {
+    "domain": "Medical / Healthcare Fraud Detection SaaS",
+    "theme": "Light Theme (with Dark Navy Header)",
+    "archetype": "Hybrid of Archetype 1 (Trust/Medical) and Archetype 4 (Enterprise SaaS/Swiss High-Contrast)",
+    "vibe": "Premium medical-tech 3D cinematic style, director-cut smooth, trustworthy, Series A investor-ready"
+  },
+  "typography": {
+    "font_family": "Inter, sans-serif",
+    "headings": {
+      "weight": "font-semibold",
+      "tracking": "tracking-tight",
+      "h1": "text-4xl sm:text-5xl lg:text-6xl text-slate-900 tracking-tighter",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl text-slate-900 tracking-tight",
+      "h3": "text-xl sm:text-2xl text-slate-800",
+      "h4": "text-lg sm:text-xl text-slate-800"
+    },
+    "body": {
+      "weight": "font-normal",
+      "size": "text-base text-slate-600 leading-relaxed"
+    },
+    "labels_overlines": "text-xs font-bold uppercase tracking-[0.1em] text-slate-500"
+  },
+  "colors": {
+    "primary": "#0F2A47",
+    "secondary": "#2E5C8A",
+    "slate": "#475569",
+    "background": "#F8FAFC",
+    "card": "#FFFFFF",
+    "border": "#E2E8F0",
+    "status": {
+      "approve": "#16A34A",
+      "reject": "#DC2626",
+      "escalate": "#D97706"
+    }
+  },
+  "surfaces_and_glassmorphism": {
+    "dark_header": "bg-[#0F2A47] text-white shadow-md border-b border-[#2E5C8A]/50 z-50 relative",
+    "cinematic_card_default": "bg-white border border-[#E2E8F0] shadow-[0_4px_20px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden transition-all duration-300",
+    "cinematic_card_hover": "hover:-translate-y-1 hover:shadow-[0_12px_30px_rgb(0,0,0,0.08)]",
+    "frosted_panel_glass": "backdrop-blur-xl bg-white/70 border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-2xl",
+    "verdict_banners": {
+      "approve": "bg-gradient-to-r from-[#16A34A]/10 to-transparent border-l-4 border-[#16A34A]",
+      "reject": "bg-gradient-to-r from-[#DC2626]/10 to-transparent border-l-4 border-[#DC2626]",
+      "escalate": "bg-gradient-to-r from-[#D97706]/10 to-transparent border-l-4 border-[#D97706]"
+    }
+  },
+  "layout_and_spacing": {
+    "global_padding": "p-6 md:p-8 lg:p-12",
+    "container": "max-w-7xl mx-auto w-full",
+    "grid_system": "Bento Grid style for Dashboard. Generous gap-6 or gap-8. Direct children must be grid items.",
+    "alignment": "Left-aligned for dense data and forms. Center-aligned for dramatic hero/upload moments."
+  },
+  "motion_and_interactions": {
+    "philosophy": "Director-cut smooth, 3D cinematic.",
+    "page_transitions": "Fade-in with slight Y-axis upward translation (e.g., framer-motion initial={{ opacity: 0, y: 10 }}).",
+    "staggered_entrance": "For the Verifying Page's 5-agent pipeline, use staggered delays (delay: index * 0.15) for a sequential card lighting effect.",
+    "micro_interactions": "Buttons scale down slightly on click (active:scale-95). Cards lift on hover. Staggered reveal for Dashboard metrics."
+  },
+  "pages_and_components": {
+    "NavBar": {
+      "description": "Dark navy header (#0F2A47), Shield logo (lucide-react), premium text links."
+    },
+    "UploadPage": {
+      "path": "/",
+      "description": "Drag-drop zone centered in viewport. Cinematic frosted glass background. Modality selector (X-ray, MRI, CT) using Shadcn Select. File validation logic."
+    },
+    "VerifyingPage": {
+      "path": "/verifying/:id",
+      "description": "'Aha' animated agent pipeline. 5 sequential agent cards that light up one by one. Live latency timer counting up."
+    },
+    "ResultPages": {
+      "paths": [
+        "/result/approved/:id",
+        "/result/rejected/:id",
+        "/result/escalated/:id"
+      ],
+      "description": "Green/Red/Amber verdict banner. Confidence progress bar. Image preview. For Rejected: Heatmap overlay on image (use absolute positioned red gradient/opacity over the image) and evidence list cards. CTAs forward to reviewer or next scan."
+    },
+    "DashboardPage": {
+      "path": "/dashboard",
+      "description": "Live metric tiles. Recharts for Verdict Pie, Cost bars, Latency line chart. Audit table at the bottom. Seeded with realistic demo data on mount."
+    },
+    "AuditDetailPage": {
+      "path": "/audit/:id",
+      "description": "Full agent JSON collapsible cards (Shadcn Accordion). Hash chain visualization (prev -> self -> next) showing secure blockchain/audit trail styling."
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "rules": "NO emojis. Use lucide-react exclusively. Logo uses <Shield /> icon."
+  },
+  "testing": {
+    "requirements": "All interactive elements (buttons, links, form inputs) MUST include a kebab-case data-testid attribute based on role. Example: data-testid='upload-submit-button'"
+  },
+  "image_urls": {
+    "demo_xray_1": {
+      "url": "https://images.unsplash.com/photo-1631563019676-dade0dbdb8fc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwyfHxtZWRpY2FsJTIweC1yYXklMjBzY2FufGVufDB8fHx8MTc4MTMzNTI0Nnww&ixlib=rb-4.1.0&q=85",
+      "category": "demo_data",
+      "description": "Various MRI images. Use for seeding the upload preview and result page images."
+    },
+    "demo_mri_1": {
+      "url": "https://images.unsplash.com/photo-1711409645921-ef3db0501f96?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwxfHxicmFpbiUyMG1yaSUyMHNjYW58ZW58MHx8fHwxNzgxMzM1MjQ2fDA&ixlib=rb-4.1.0&q=85",
+      "category": "demo_data",
+      "description": "Close up of a human brain MRI. Use for alternative demo cases."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Install required dependencies: lucide-react, framer-motion, recharts.",
+    "Set up Tailwind CSS configuration incorporating the custom color palette (#0F2A47, #2E5C8A, #475569, etc.).",
+    "Create a layout component that includes the dark Navy Header with Shield icon.",
+    "Implement the Upload component with a premium drag-and-drop frosted glass zone.",
+    "Implement the Mock Processing/Verifying page using framer-motion to stagger the entrance of 5 agent cards (representing the AI pipeline).",
+    "Build the dashboard using Recharts for data visualization and seed realistic demo data in a useEffect so it looks live instantly.",
+    "Implement Result pages (Approved, Rejected, Escalated) with appropriate colored banners, confidence bars, and heatmap overlays using absolute positioning for the rejected state.",
+    "Ensure ALL interactive elements possess appropriate `data-testid` attributes.",
+    "Follow 3D cinematic rules: use backdrop-blur and shadow depth for a premium investor-ready feel."
+  ]
+}
