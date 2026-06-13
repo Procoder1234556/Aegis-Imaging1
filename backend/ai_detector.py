@@ -214,7 +214,7 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
                 "You are a forensic image analyst specializing in detecting AI-generated images. "
                 "Always respond with only valid JSON."
             ),
-        ).with_model("gemini", "gemini-2.5-flash-lite")
+        ).with_model("gemini", "gemini-3.5-flash")
 
         image_file = FileContentWithMimeType(file_path=tmp_path, mime_type=mime_type)
 
@@ -243,7 +243,7 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
                 "is_ai_generated": bool(parsed.get("is_ai_generated", False)),
                 "confidence": float(parsed.get("confidence", 0.5)),
                 "reasoning": str(parsed.get("reasoning", "Gemini analysis complete.")),
-                "model": "gemini-2.5-flash-lite",
+                "model": "gemini-3.5-flash",
             }, None
 
         return None, "Gemini returned an unreadable response. Please try again."
