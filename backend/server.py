@@ -36,7 +36,7 @@ app = FastAPI(title="Aegis Imaging API", version="3.0.0", docs_url="/api/docs")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,   # Pure Bearer-token auth — no cookies/CORS conflict
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -162,7 +162,7 @@ async def verify_prescription_external(
     )
     if not raw_key:
         auth = request.headers.get("Authorization", "")
-        if auth.startswith("Bearer rxg_"):
+        if auth.lower().startswith("bearer ") and auth[7:].startswith("aeg_live_"):
             raw_key = auth[7:]
 
     if not raw_key:
@@ -184,12 +184,21 @@ async def verify_prescription_external(
     if not key_row["is_active"]:
         raise HTTPException(403, "API key has been revoked")
 
-    # Update usage stats
+    # Update usage stats — reset calls_today if it's a new calendar day
+    today_str = datetime.now(timezone.utc).date().isoformat()
     async with get_db() as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            "SELECT calls_today, calls_today_date FROM api_keys WHERE key_id=?",
+            (key_row["key_id"],),
+        )
+        kr = await cur.fetchone()
+        stored_date = (kr["calls_today_date"] or "") if kr else ""
+        new_today = 1 if stored_date != today_str else (kr["calls_today"] or 0) + 1
         await db.execute(
-            "UPDATE api_keys SET calls_total=calls_total+1, calls_today=calls_today+1, "
-            "last_used_at=? WHERE key_id=?",
-            (datetime.now(timezone.utc).isoformat(), key_row["key_id"]),
+            "UPDATE api_keys SET calls_total=calls_total+1, calls_today=?, "
+            "calls_today_date=?, last_used_at=? WHERE key_id=?",
+            (new_today, today_str, datetime.now(timezone.utc).isoformat(), key_row["key_id"]),
         )
         await db.commit()
 
@@ -223,14 +232,23 @@ class CreateKeyRequest(BaseModel):
 @app.get("/api/keys")
 async def list_api_keys(request: Request):
     user = await get_current_user(request)
+    today_str = datetime.now(timezone.utc).date().isoformat()
     async with get_db() as db:
         db.row_factory = aiosqlite.Row
         cur = await db.execute(
             "SELECT key_id, name, description, is_active, calls_total, calls_today, "
-            "last_used_at, created_at FROM api_keys WHERE user_id=? ORDER BY created_at DESC",
+            "calls_today_date, last_used_at, created_at FROM api_keys WHERE user_id=? ORDER BY created_at DESC",
             (user["user_id"],),
         )
-        keys = [dict(r) for r in await cur.fetchall()]
+        rows = await cur.fetchall()
+    keys = []
+    for r in rows:
+        d = dict(r)
+        # Reset calls_today in response if it's a stale date
+        if d.get("calls_today_date", "") != today_str:
+            d["calls_today"] = 0
+        d.pop("calls_today_date", None)  # don't expose internal field
+        keys.append(d)
     return {"keys": keys}
 
 

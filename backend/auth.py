@@ -185,7 +185,7 @@ async def login(body: LoginRequest, response: Response):
 async def google_login(request: Request):
     # REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     origin = request.headers.get("origin") or str(request.base_url).rstrip("/")
-    redirect_url = f"{origin}/dashboard"
+    redirect_url = f"{origin}/auth/callback"
     auth_url = f"https://auth.emergentagent.com/?redirect={__import__('urllib.parse', fromlist=['quote']).quote(redirect_url)}"
     return {"url": auth_url}
 

@@ -1,9 +1,21 @@
-"""RxGuard Backend API Tests"""
+"""Aegis Imaging — Backend Auth & API Key Tests"""
 import pytest
 import requests
 import os
+from pathlib import Path
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+def _load_base_url():
+    url = os.environ.get('REACT_APP_BACKEND_URL', '')
+    if not url:
+        env_file = Path('/app/frontend/.env')
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if line.startswith('REACT_APP_BACKEND_URL='):
+                    url = line.split('=', 1)[1].strip()
+                    break
+    return url.rstrip('/')
+
+BASE_URL = _load_base_url()
 
 TEST_EMAIL = "testpharmacy@rxguard.test"
 TEST_PASSWORD = "Test1234!"

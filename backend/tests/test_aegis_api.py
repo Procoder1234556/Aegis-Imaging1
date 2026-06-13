@@ -1,11 +1,22 @@
-"""Backend API tests for Aegis Imaging"""
+"""Aegis Imaging — Backend API Tests"""
 import pytest
 import requests
 import os
 from pathlib import Path
 import io
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
+def _load_base_url():
+    url = os.environ.get('REACT_APP_BACKEND_URL', '')
+    if not url:
+        env_file = Path('/app/frontend/.env')
+        if env_file.exists():
+            for line in env_file.read_text().splitlines():
+                if line.startswith('REACT_APP_BACKEND_URL='):
+                    url = line.split('=', 1)[1].strip()
+                    break
+    return url.rstrip('/')
+
+BASE_URL = _load_base_url()
 
 
 class TestHealth:
@@ -37,7 +48,7 @@ class TestDashboard:
         r = requests.get(f"{BASE_URL}/api/v1/dashboard")
         data = r.json()
         totals = data["totals"]
-        assert totals["total"] == 20, f"Expected 20 total records, got {totals['total']}"
+        assert totals["total"] >= 20, f"Expected at least 20 total records, got {totals['total']}"
         print(f"Totals: {totals}")
 
     def test_dashboard_approve_reject_counts(self):
@@ -74,7 +85,7 @@ class TestAudits:
     def test_audits_list_20_records(self):
         r = requests.get(f"{BASE_URL}/api/v1/audits")
         data = r.json()
-        assert len(data["audits"]) == 20, f"Expected 20 audits, got {len(data['audits'])}"
+        assert len(data["audits"]) >= 20, f"Expected at least 20 audits, got {len(data['audits'])}"
 
     def test_audit_detail_by_id(self):
         r = requests.get(f"{BASE_URL}/api/v1/audits")

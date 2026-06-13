@@ -4,34 +4,49 @@ const AuthContext = createContext(null);
 const BASE = process.env.REACT_APP_BACKEND_URL || '';
 
 async function fetchMe(token) {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  const r = await fetch(`${BASE}/api/auth/me`, { credentials: 'include', headers });
+  if (!token) throw new Error('no token');
+  const r = await fetch(`${BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!r.ok) throw new Error('not authenticated');
   return r.json();
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(undefined); // undefined = loading
-  const [token, setToken]     = useState(() => localStorage.getItem('aegis_token') || '');
+  const [user, setUser]   = useState(undefined); // undefined = still loading
+  const [token, setToken] = useState(() => localStorage.getItem('aegis_token') || '');
 
+  // Hydrate user from stored token on mount / token change
   useEffect(() => {
+    if (!token) { setUser(null); return; }
     fetchMe(token)
       .then(u => setUser(u))
-      .catch(() => setUser(null));
+      .catch(() => {
+        localStorage.removeItem('aegis_token');
+        setToken('');
+        setUser(null);
+      });
   }, [token]);
+
+  const _saveSession = (sessionToken, userData) => {
+    localStorage.setItem('aegis_token', sessionToken);
+    setToken(sessionToken);
+    setUser(userData);
+  };
 
   const login = async (email, password) => {
     const r = await fetch(`${BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Login failed'); }
+    if (!r.ok) {
+      let msg = 'Login failed';
+      try { msg = (await r.json()).detail || msg; } catch {}
+      throw new Error(msg);
+    }
     const data = await r.json();
-    localStorage.setItem('aegis_token', data.session_token);
-    setToken(data.session_token);
-    setUser(data);
+    _saveSession(data.session_token, data);
     return data;
   };
 
@@ -39,14 +54,15 @@ export function AuthProvider({ children }) {
     const r = await fetch(`${BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ email, password, name, avatar_color: avatarColor }),
     });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Registration failed'); }
+    if (!r.ok) {
+      let msg = 'Registration failed';
+      try { msg = (await r.json()).detail || msg; } catch {}
+      throw new Error(msg);
+    }
     const data = await r.json();
-    localStorage.setItem('aegis_token', data.session_token);
-    setToken(data.session_token);
-    setUser(data);
+    _saveSession(data.session_token, data);
     return data;
   };
 
@@ -56,18 +72,31 @@ export function AuthProvider({ children }) {
     window.location.href = url;
   };
 
+  // Called by AuthCallback after Google OAuth exchange
+  const setSessionFromCallback = (sessionToken, userData) => {
+    _saveSession(sessionToken, userData);
+  };
+
   const logout = async () => {
-    await fetch(`${BASE}/api/auth/logout`, { method: 'POST', credentials: 'include',
-      headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    try {
+      await fetch(`${BASE}/api/auth/logout`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch {}
     localStorage.removeItem('aegis_token');
     setToken('');
     setUser(null);
   };
 
-  const refreshUser = () => fetchMe(token).then(setUser).catch(() => setUser(null));
+  const refreshUser = () =>
+    fetchMe(token).then(setUser).catch(() => setUser(null));
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, loginWithGoogle, logout, refreshUser }}>
+    <AuthContext.Provider value={{
+      user, token, login, register, loginWithGoogle,
+      logout, refreshUser, setSessionFromCallback,
+    }}>
       {children}
     </AuthContext.Provider>
   );

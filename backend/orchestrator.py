@@ -4,6 +4,7 @@ Hard timeout: 10s on the full pipeline.
 """
 import asyncio
 import hashlib
+import math
 import time
 import uuid
 from datetime import datetime, timezone
@@ -15,6 +16,19 @@ from agents.verdict import VerdictAgent
 from agents.audit import AuditAgent
 
 PIPELINE_TIMEOUT_SEC = 10
+
+
+def _sanitize(obj):
+    """Recursively replace NaN/Inf floats so JSON serialization never fails."""
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return 0.0
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(i) for i in obj]
+    return obj
 
 
 class AsyncOrchestrator:
@@ -74,7 +88,7 @@ class AsyncOrchestrator:
         context["audit"] = audit_r
 
         # Build final response
-        return self._build_response(context, total_latency)
+        return _sanitize(self._build_response(context, total_latency))
 
     def _build_response(self, ctx: dict, total_latency: int) -> dict:
         verdict_out  = ctx.get("verdict", {})

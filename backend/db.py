@@ -143,6 +143,14 @@ CREATE TABLE IF NOT EXISTS mock_ehr_events (
 async def init_db():
     async with get_db() as db:
         await db.executescript(CREATE_TABLES)
+        # Safe migrations — ignore if column already exists
+        for stmt in [
+            "ALTER TABLE api_keys ADD COLUMN calls_today_date TEXT DEFAULT ''",
+        ]:
+            try:
+                await db.execute(stmt)
+            except Exception:
+                pass
         await db.commit()
 
 
@@ -169,8 +177,9 @@ async def write_verification(row: dict) -> str:
                (audit_id, created_at, image_sha256, image_path, heatmap_path,
                 modality, verdict, confidence, rationale,
                 intake_json, forensics_json, clinical_json, orchestrator_json,
-                total_latency_ms, total_cost_usd, hash_prev, hash_self)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                total_latency_ms, total_cost_usd, hash_prev, hash_self,
+                user_id, api_key_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 row["audit_id"],
                 row.get("created_at", datetime.now(timezone.utc).isoformat()),
@@ -189,6 +198,8 @@ async def write_verification(row: dict) -> str:
                 row.get("total_cost_usd", 0.0),
                 prev_hash,
                 hash_self,
+                row.get("user_id"),
+                row.get("api_key_id"),
             ),
         )
         await db.commit()

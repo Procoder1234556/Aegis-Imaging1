@@ -1,22 +1,22 @@
-# Test Credentials
+# Aegis Imaging — Test Credentials
 
-## Application Auth
-This application has NO authentication. All endpoints are public.
+## Registered test accounts (SQLite — persists across restarts in /app/data/aegis.db)
 
-## API Keys in Backend .env
-- IRONLABS_API_KEY: sk_ht5EpxTGSaLu2XpEH2cn1QzxQtQW3skM
-- EMERGENT_LLM_KEY: sk-emergent-bB5Bd8a94255fA6Bf3
-- HF_TOKEN: (not set — HuggingFace detectors return neutral 0.5 score)
+| Account | Email | Password | Plan | Notes |
+|---------|-------|----------|------|-------|
+| Test Pharmacy | testpharmacy@rxguard.test | Test1234! | free | Created by testing agent iter 2 |
+| Auth Fix Test | auth_fix_test@test.com | Test1234 | free | Created for auth fix validation |
+| CORS Fix Test | corsfix@test.com | Fix1234 | free | Created for CORS/auth fix validation |
 
-## Demo Audit IDs (seeded on startup)
-The system seeds 20 records on startup. Check /api/v1/audits for current IDs.
-Examples from seeding:
-- AEG-YYYYMMDD-00001 through AEG-YYYYMMDD-00020
+## How to use in test scripts
+```python
+BASE = "https://116d1460-522f-4c36-8a17-8dc656c92c5d.preview.emergentagent.com"
+# login
+r = requests.post(f"{BASE}/api/auth/login", json={"email": "testpharmacy@rxguard.test", "password": "Test1234!"})
+token = r.json()["session_token"]
+headers = {"Authorization": f"Bearer {token}"}
+```
 
-## Endpoints
-- Backend: http://localhost:8001 (internal) or https://116d1460-522f-4c36-8a17-8dc656c92c5d.preview.emergentagent.com (external)
-- Frontend: http://localhost:3000 (internal) or https://116d1460-522f-4c36-8a17-8dc656c92c5d.preview.emergentagent.com (external)
-
-## Database
-- SQLite at /app/data/aegis.db
-- No password required
+## Admin / Seed
+- No admin account — there is no admin role in this app
+- 20 seed audit records pre-loaded at startup from `db.py`
