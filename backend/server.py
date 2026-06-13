@@ -26,7 +26,7 @@ from db import (
     init_db, seed_demo_data, seed_demo_users, get_db,
     get_dashboard_data, get_audit_record, get_recent_audits, log_mock_event,
 )
-from hf_detector import run_verification
+from ai_detector import run_verification
 from auth import router as auth_router, get_current_user, optional_user, FREE_DAILY_LIMIT
 from payments import router as payments_router
 from email_router import router as email_router
