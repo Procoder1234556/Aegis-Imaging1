@@ -1,8 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import NavBar from './components/NavBar';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import SideBar from './components/SideBar';
 import Landing from './pages/Landing';
+import Login from './pages/Login';
+import AuthCallback from './components/AuthCallback';
 import Upload from './pages/Upload';
 import Verifying from './pages/Verifying';
 import Approved from './pages/Approved';
@@ -11,37 +15,60 @@ import Escalated from './pages/Escalated';
 import Dashboard from './pages/Dashboard';
 import AuditDetail from './pages/AuditDetail';
 import Processing from './pages/Processing';
+import Billing from './pages/Billing';
+
+/* Public routes render without sidebar */
+const PUBLIC_PATHS = ['/', '/login'];
 
 function AppContent() {
   const location = useLocation();
-  const isLanding = location.pathname === '/';
+  const isPublic = PUBLIC_PATHS.includes(location.pathname) ||
+    location.pathname.startsWith('/auth/');
 
+  if (isPublic) {
+    return (
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/"              element={<Landing />} />
+          <Route path="/login"         element={<Login />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+        </Routes>
+      </AnimatePresence>
+    );
+  }
+
+  /* Dashboard routes — sidebar layout */
   return (
-    <div className={`min-h-screen flex flex-col ${isLanding ? '' : 'bg-aegis-bg'}`}>
-      {!isLanding && <NavBar />}
-      <main className={isLanding ? '' : 'flex-1'}>
+    <div className="flex min-h-screen" style={{ background: 'var(--color-bg)' }}>
+      <SideBar />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden min-h-screen">
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="/"                        element={<Landing />} />
+            <Route path="/dashboard"               element={<Dashboard />} />
             <Route path="/verify"                  element={<Upload />} />
             <Route path="/verifying/:id"           element={<Verifying />} />
             <Route path="/result/approved/:id"     element={<Approved />} />
             <Route path="/result/rejected/:id"     element={<Rejected />} />
             <Route path="/result/escalated/:id"    element={<Escalated />} />
             <Route path="/processing/:id"          element={<Processing />} />
-            <Route path="/dashboard"               element={<Dashboard />} />
             <Route path="/audit/:id"               element={<AuditDetail />} />
+            <Route path="/billing"                 element={
+              <ProtectedRoute><Billing /></ProtectedRoute>
+            } />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </AnimatePresence>
-      </main>
+      </div>
     </div>
   );
 }
 
 export default function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   );
 }
