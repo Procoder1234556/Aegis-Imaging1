@@ -115,9 +115,11 @@ const REVIEWS = [
   { stars: 4, text: "Very accurate for controlled substance prescriptions. Saved us from a DEA compliance issue.", author: "PharmaHub", type: "Pro" },
 ];
 
-const NEWS = [
-  { source: "Pharmacy Times", tag: "Regulation", title: "FDA Strengthens Guidelines on E-Prescription Verification for Controlled Substances", date: "Jun 14, 2026", url: "https://www.pharmacytimes.com/search#q=e-prescription%20verification&t=All" },
-  { source: "Drug Topics", tag: "Fraud", title: "Online Pharmacy Fraud Costs Healthcare $4.2B Annually, New Study Confirms", date: "Jun 13, 2026", url: "https://www.drugtopics.com/search#q=prescription%20fraud&t=All" },
+const NEWS_TAG_COLORS = { Regulation: '#1B47DB', Fraud: '#B26552', Technology: '#22C55E', Industry: '#8B5CF6', Compliance: '#F59E0B', Telehealth: '#EC4899', 'Global Health': '#06B6D4', Health: '#10B981' };
+
+const NEWS_FALLBACK = [
+  { source: "Pharmacy Times", tag: "Regulation", title: "FDA Strengthens Guidelines on E-Prescription Verification for Controlled Substances", date: "Jun 14, 2026", url: "https://www.pharmacytimes.com/search#q=e-prescription" },
+  { source: "Drug Topics", tag: "Fraud", title: "Online Pharmacy Fraud Costs Healthcare $4.2B Annually, New Study Confirms", date: "Jun 13, 2026", url: "https://www.drugtopics.com/search#q=prescription+fraud" },
   { source: "Healthcare IT News", tag: "Technology", title: "AI-Powered Prescription Verification Reduces Fraud by 94% in Clinical Trial", date: "Jun 12, 2026", url: "https://www.healthcareitnews.com/topic/fraud-and-security" },
   { source: "APhA Journal", tag: "Industry", title: "76% of Online Pharmacies Face Prescription Forgery Attempts Monthly", date: "Jun 11, 2026", url: "https://www.japha.org/searchresults?query=prescription+forgery" },
   { source: "MedCity News", tag: "Compliance", title: "New State Laws Mandate Automated Prescription Authenticity Checks by 2027", date: "Jun 10, 2026", url: "https://medcitynews.com/?s=prescription+compliance" },
@@ -298,8 +300,96 @@ function StatsTicker({ stats }) {
 }
 
 /* ─── For Judges Section ─────────────────────────────────────────────────── */
-function JudgesSection() {
+function JudgesSection({ readmeContent }) {
   const [activeSlide, setActiveSlide] = useState(0);
+
+  /* ── Simple markdown → JSX renderer (headings, lists, code, tables) ── */
+  function RenderReadme({ md }) {
+    if (!md) return <div className="text-white/30 text-sm animate-pulse">Loading README…</div>;
+    const lines = md.split('\n');
+    const elements = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // H1
+      if (line.startsWith('# ')) {
+        elements.push(<h3 key={i} className="text-white font-black text-lg mb-2 mt-1">{line.slice(2)}</h3>);
+      }
+      // H2
+      else if (line.startsWith('## ')) {
+        elements.push(<h4 key={i} className="text-[#1B47DB] font-semibold text-sm mb-1.5 mt-4">{line.slice(3)}</h4>);
+      }
+      // H3
+      else if (line.startsWith('### ')) {
+        elements.push(<h5 key={i} className="text-[#22C55E] font-semibold text-xs mb-1 mt-3">{line.slice(4)}</h5>);
+      }
+      // Code block
+      else if (line.startsWith('```')) {
+        const lang = line.slice(3).trim() || 'bash';
+        const codeLines = [];
+        i++;
+        while (i < lines.length && !lines[i].startsWith('```')) {
+          codeLines.push(lines[i]);
+          i++;
+        }
+        elements.push(
+          <pre key={i} className="bg-[#0D1117] border border-white/10 rounded-lg p-3 text-xs font-mono text-[#CDD6F4] overflow-x-auto mb-2 mt-1 leading-relaxed">
+            <code>{codeLines.join('\n')}</code>
+          </pre>
+        );
+      }
+      // Table
+      else if (line.startsWith('|')) {
+        const tableLines = [];
+        while (i < lines.length && lines[i].startsWith('|')) {
+          tableLines.push(lines[i]);
+          i++;
+        }
+        const headers = tableLines[0].split('|').filter(Boolean).map(s => s.trim());
+        const rows = tableLines.slice(2).map(r => r.split('|').filter(Boolean).map(s => s.trim()));
+        elements.push(
+          <div key={i} className="overflow-x-auto mb-3 mt-1">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr>{headers.map((h, j) => <th key={j} className="text-left px-3 py-1.5 text-white/60 font-semibold border-b border-white/10">{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {rows.map((row, j) => <tr key={j}>{row.map((cell, k) => <td key={k} className="px-3 py-1.5 text-white/50 border-b border-white/5">{cell}</td>)}</tr>)}
+              </tbody>
+            </table>
+          </div>
+        );
+        continue;
+      }
+      // Bullet list
+      else if (line.startsWith('- ') || line.startsWith('* ')) {
+        elements.push(
+          <li key={i} className="flex items-start gap-2 text-white/60 text-xs mb-1">
+            <span className="w-1 h-1 rounded-full bg-[#1B47DB] mt-1.5 shrink-0" />
+            {line.slice(2)}
+          </li>
+        );
+      }
+      // Blockquote
+      else if (line.startsWith('> ')) {
+        elements.push(
+          <p key={i} className="border-l-2 border-[#1B47DB]/50 pl-3 text-white/40 text-xs italic mb-1">{line.slice(2)}</p>
+        );
+      }
+      // Horizontal rule
+      else if (line === '---') {
+        elements.push(<hr key={i} className="border-white/10 my-3" />);
+      }
+      // Normal paragraph
+      else if (line.trim()) {
+        elements.push(<p key={i} className="text-white/50 text-xs leading-relaxed mb-1">{line}</p>);
+      }
+      i++;
+    }
+    return <ul className="space-y-0.5 list-none">{elements}</ul>;
+  }
 
   return (
     <section id="judges" className="py-24 border-t border-white/8">
@@ -316,32 +406,18 @@ function JudgesSection() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-14">
-          {/* README */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-7">
-            <div className="flex items-center gap-2 mb-5">
-              <FileText className="w-4 h-4 text-white/40" />
-              <span className="text-sm font-semibold text-white/60">README.md</span>
+          {/* README — live from file */}
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-7 overflow-auto max-h-[520px]">
+            <div className="flex items-center gap-2 mb-5 sticky top-0">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#FF605C]" />
+                <span className="w-3 h-3 rounded-full bg-[#FFBD44]" />
+                <span className="w-3 h-3 rounded-full bg-[#00CA4E]" />
+              </div>
+              <span className="text-sm font-semibold text-white/60 ml-1">README.md</span>
+              <span className="ml-auto text-xs text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded-full">Live</span>
             </div>
-            <div className="space-y-5 text-sm leading-relaxed">
-              <div>
-                <h3 className="text-white font-bold text-lg mb-1">Aegis Imaging — Prescription Verification API</h3>
-                <p className="text-white/50">An AI-powered SaaS platform that helps online pharmacies verify prescription authenticity in under 2 seconds via a simple REST API.</p>
-              </div>
-              <div>
-                <h4 className="text-[#1B47DB] font-semibold mb-2">Problem Statement</h4>
-                <p className="text-white/50">Online pharmacies face a growing epidemic of forged prescriptions. Manual verification is slow (3–5 min), expensive, and leaves pharmacies legally exposed. Prescription fraud costs the US healthcare system $4.2B annually.</p>
-              </div>
-              <div>
-                <h4 className="text-[#22C55E] font-semibold mb-2">Our Solution</h4>
-                <p className="text-white/50">A 5-agent AI pipeline (Intake → Forensics → Clinical → Verdict → Audit) that verifies prescriptions in &lt;2s via REST API. Pharmacies integrate with 5 lines of code and receive VALID/FORGED/SUSPICIOUS verdicts with confidence scores and tamper-evident audit logs.</p>
-              </div>
-              <div>
-                <h4 className="text-[#F59E0B] font-semibold mb-2">Quick Start</h4>
-                <CodeBlock compact lang="bash" code={`curl -X POST https://api.aegis-imaging.ai/v1/verify \\
-  -H "X-API-Key: aeg_live_xxx" \\
-  -F "file=@prescription.jpg"`} />
-              </div>
-            </div>
+            <RenderReadme md={readmeContent} />
           </div>
 
           {/* Tech Stack + Architecture */}
@@ -491,8 +567,7 @@ function HowItWorksSection() {
 }
 
 /* ─── Industry News ────────────────────────────────────────────────────────── */
-function NewsSection() {
-  const tagColors = { Regulation: '#1B47DB', Fraud: '#B26552', Technology: '#22C55E', Industry: '#8B5CF6', Compliance: '#F59E0B', Telehealth: '#EC4899' };
+function NewsSection({ news, newsSource }) {
   return (
     <section id="news" className="py-24 border-t border-white/8">
       <div className="max-w-7xl mx-auto px-6">
@@ -502,25 +577,26 @@ function NewsSection() {
             <p className="text-white/50 mt-1 text-sm">Latest from pharmaceutical and healthcare news</p>
           </div>
           <span className="flex items-center gap-1.5 text-xs text-[#22C55E] bg-[#22C55E]/10 border border-[#22C55E]/20 px-2.5 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" /> Live Feed
+            <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+            {newsSource === 'live' ? 'Live RSS' : 'Curated Feed'}
           </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {NEWS.map((n, i) => (
+          {news.map((n, i) => (
             <motion.a
-              key={i}
-              href={n.url}
-              target="_blank"
-              rel="noopener noreferrer"
+              key={i} href={n.url} target="_blank" rel="noopener noreferrer"
               data-testid={`news-card-${i}`}
               initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
               className="bg-white/[0.03] border border-white/8 rounded-xl p-5 hover:border-white/20 transition-all cursor-pointer group block"
               style={{ textDecoration: 'none' }}>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: tagColors[n.tag], background: tagColors[n.tag] + '15' }}>{n.tag}</span>
-                <span className="text-xs text-white/30 ml-auto">{n.source}</span>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ color: NEWS_TAG_COLORS[n.tag] || '#6B7280', background: (NEWS_TAG_COLORS[n.tag] || '#6B7280') + '15' }}>
+                  {n.tag}
+                </span>
+                <span className="text-xs text-white/30 ml-auto truncate max-w-[100px]">{n.source}</span>
               </div>
-              <h3 className="text-sm text-white/80 font-medium leading-snug mb-3 group-hover:text-white transition-colors">{n.title}</h3>
+              <h3 className="text-sm text-white/80 font-medium leading-snug mb-3 group-hover:text-white transition-colors line-clamp-3">{n.title}</h3>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-white/30">{n.date}</span>
                 <ExternalLink className="w-3.5 h-3.5 text-white/20 group-hover:text-white/70 transition-colors" />
@@ -668,6 +744,9 @@ export default function Landing() {
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [liveStats, setLiveStats] = useState({ total_verified: 14847, fraud_blocked: 2341, pharmacies: 189, uptime_pct: 99.97 });
+  const [readmeContent, setReadmeContent] = useState('');
+  const [news, setNews] = useState(NEWS_FALLBACK);
+  const [newsSource, setNewsSource] = useState('curated');
 
   useEffect(() => {
     const unsub = scrollY.onChange(v => setScrolled(v > 40));
@@ -687,15 +766,36 @@ export default function Landing() {
     return () => clearInterval(iv);
   }, []);
 
+  // Fetch README
+  useEffect(() => {
+    fetch(`${API_BASE}/api/readme`)
+      .then(r => r.json())
+      .then(d => setReadmeContent(d.content || ''))
+      .catch(() => {});
+  }, []);
+
+  // Fetch RSS news feed
+  useEffect(() => {
+    fetch(`${API_BASE}/api/rss`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.items && d.items.length) {
+          setNews(d.items);
+          setNewsSource(d.source || 'curated');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen font-onest" style={{ background: '#040B14', color: 'white' }}>
       <Nav scrolled={scrolled} />
       <Hero liveStats={liveStats} />
       <StatsTicker stats={liveStats} />
-      <JudgesSection />
+      <JudgesSection readmeContent={readmeContent} />
       <HowItWorksSection />
       <FeaturesSection />
-      <NewsSection />
+      <NewsSection news={news} newsSource={newsSource} />
       <SocialProofSection />
       <PricingSection />
       <Footer />
