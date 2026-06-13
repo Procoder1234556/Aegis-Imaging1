@@ -1,13 +1,13 @@
 """
-Database layer — SQLite via aiosqlite.
-Handles: init, hash-chain, CRUD, seed demo data.
+RxGuard — Database layer (SQLite via aiosqlite)
+Handles: init, hash-chain, CRUD, seed demo data, api keys, users.
 """
 import aiosqlite
-import asyncio
 import hashlib
 import json
 import os
 import random
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -15,8 +15,14 @@ DB_PATH = os.getenv("DATABASE_URL", "sqlite:///./data/aegis.db").replace("sqlite
 Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 
 
+@asynccontextmanager
 async def get_db():
-    return await aiosqlite.connect(DB_PATH)
+    """Async context manager — use as: async with get_db() as db:"""
+    db = await aiosqlite.connect(DB_PATH)
+    try:
+        yield db
+    finally:
+        await db.close()
 
 
 # ─── Hash Chain ───────────────────────────────────────────────────────────────
@@ -70,6 +76,22 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
 );
 CREATE INDEX IF NOT EXISTS idx_payments_session ON payment_transactions(session_id);
 
+CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    key_id TEXT UNIQUE NOT NULL,
+    key_hash TEXT NOT NULL,
+    name TEXT DEFAULT 'My API Key',
+    description TEXT DEFAULT '',
+    is_active INTEGER DEFAULT 1,
+    calls_total INTEGER DEFAULT 0,
+    calls_today INTEGER DEFAULT 0,
+    last_used_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_keys_user ON api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(key_hash);
+
 CREATE TABLE IF NOT EXISTS verifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     audit_id TEXT UNIQUE NOT NULL,
@@ -88,9 +110,10 @@ CREATE TABLE IF NOT EXISTS verifications (
     total_latency_ms INTEGER,
     total_cost_usd REAL,
     hash_prev TEXT,
-    hash_self TEXT NOT NULL
+    hash_self TEXT NOT NULL,
+    user_id TEXT DEFAULT NULL,
+    api_key_id TEXT DEFAULT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_ver_audit ON verifications(audit_id);
 CREATE INDEX IF NOT EXISTS idx_ver_created ON verifications(created_at);
 
@@ -118,7 +141,7 @@ CREATE TABLE IF NOT EXISTS mock_ehr_events (
 
 
 async def init_db():
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with get_db() as db:
         await db.executescript(CREATE_TABLES)
         await db.commit()
 
@@ -126,9 +149,7 @@ async def init_db():
 # ─── Write record ──────────────────────────────────────────────────────────────
 
 async def write_verification(row: dict) -> str:
-    """Insert record; returns hash_self."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        # Get last hash
+    async with get_db() as db:
         cursor = await db.execute(
             "SELECT hash_self FROM verifications ORDER BY id DESC LIMIT 1"
         )
@@ -156,7 +177,7 @@ async def write_verification(row: dict) -> str:
                 row["image_sha256"],
                 row.get("image_path", ""),
                 row.get("heatmap_path"),
-                row.get("modality", "xray"),
+                row.get("modality", "prescription"),
                 row["verdict"],
                 row["confidence"],
                 row.get("rationale", ""),
@@ -175,7 +196,7 @@ async def write_verification(row: dict) -> str:
 
 
 async def log_ironlabs_call(row: dict):
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with get_db() as db:
         await db.execute(
             """INSERT INTO ironlabs_calls
                (audit_id, agent, model, task_type, tokens, cost_usd, latency_ms)
@@ -194,7 +215,7 @@ async def log_ironlabs_call(row: dict):
 
 
 async def log_mock_event(endpoint: str, payload: dict):
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with get_db() as db:
         await db.execute(
             """INSERT INTO mock_ehr_events (audit_id, endpoint, payload_json)
                VALUES (?,?,?)""",
@@ -205,12 +226,8 @@ async def log_mock_event(endpoint: str, payload: dict):
 
 # ─── Read operations ──────────────────────────────────────────────────────────
 
-def _row_to_dict(row, cursor) -> dict:
-    return {col[0]: row[i] for i, col in enumerate(cursor.description)}
-
-
 async def get_audit_record(audit_id: str) -> dict | None:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with get_db() as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
             "SELECT * FROM verifications WHERE audit_id = ?", (audit_id,)
@@ -228,7 +245,7 @@ async def get_audit_record(audit_id: str) -> dict | None:
 
 
 async def get_recent_audits(limit: int = 50, offset: int = 0) -> list[dict]:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with get_db() as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
             "SELECT audit_id, created_at, modality, verdict, confidence, "
@@ -241,25 +258,21 @@ async def get_recent_audits(limit: int = 50, offset: int = 0) -> list[dict]:
 
 
 async def get_dashboard_data() -> dict:
-    async with aiosqlite.connect(DB_PATH) as db:
+    async with get_db() as db:
         db.row_factory = aiosqlite.Row
 
-        # Totals
         today = datetime.now(timezone.utc).date().isoformat()
-        c = await db.execute(
-            "SELECT verdict, COUNT(*) as cnt FROM verifications "
-            "WHERE date(created_at) = date('now') GROUP BY verdict"
-        )
-        today_rows = {r["verdict"]: r["cnt"] for r in await c.fetchall()}
 
         c_all = await db.execute(
             "SELECT verdict, COUNT(*) as cnt FROM verifications GROUP BY verdict"
         )
         all_rows = {r["verdict"]: r["cnt"] for r in await c_all.fetchall()}
 
-        total_today = sum(today_rows.values())
+        c_today = await db.execute(
+            "SELECT COUNT(*) as cnt FROM verifications WHERE date(created_at)=date('now')"
+        )
+        total_today = (await c_today.fetchone())["cnt"]
 
-        # Latency
         c_lat = await db.execute(
             "SELECT total_latency_ms FROM verifications ORDER BY id DESC LIMIT 100"
         )
@@ -269,7 +282,6 @@ async def get_dashboard_data() -> dict:
         p95 = latencies[int(len(latencies) * 0.95)] if latencies else 3200
         avg = int(sum(latencies) / len(latencies)) if latencies else 1840
 
-        # Cost
         c_cost = await db.execute(
             "SELECT SUM(total_cost_usd) as total FROM verifications"
         )
@@ -282,7 +294,6 @@ async def get_dashboard_data() -> dict:
 
         saved_usd = round(total_cost * 0.686 / (1 - 0.686), 4)
 
-        # Recent audits
         c_rec = await db.execute(
             "SELECT audit_id, created_at, modality, verdict, confidence, "
             "total_latency_ms, total_cost_usd, hash_self "
@@ -290,11 +301,23 @@ async def get_dashboard_data() -> dict:
         )
         recent = [dict(r) for r in await c_rec.fetchall()]
 
-        # Latency time series (last 20 records)
         series = [
             {"time": r["created_at"][:16], "latency_ms": r["total_latency_ms"]}
             for r in recent if r["total_latency_ms"]
         ]
+
+        # Daily trend (last 7 days)
+        c_trend = await db.execute(
+            "SELECT date(created_at) as day, COUNT(*) as cnt FROM verifications "
+            "GROUP BY date(created_at) ORDER BY day DESC LIMIT 7"
+        )
+        trend = [{"day": r["day"], "count": r["cnt"]} for r in await c_trend.fetchall()]
+
+        # API key usage
+        c_keys = await db.execute(
+            "SELECT COUNT(*) as cnt FROM api_keys WHERE is_active=1"
+        )
+        active_keys = (await c_keys.fetchone())["cnt"]
 
         return {
             "totals": {
@@ -313,103 +336,166 @@ async def get_dashboard_data() -> dict:
             },
             "recent_audits": recent,
             "latency_series": series[::-1],
+            "daily_trend": trend[::-1],
+            "active_api_keys": active_keys,
         }
 
 
-# ─── Seed demo data ───────────────────────────────────────────────────────────
+# ─── Seed demo users ──────────────────────────────────────────────────────────
+
+async def seed_demo_users():
+    """Create demo pharmacy accounts with API keys."""
+    import bcrypt
+    demo_accounts = [
+        {
+            "email": "demo@rxguard.ai",
+            "password": "Demo1234!",
+            "name": "MedPlus Pharmacy",
+            "plan": "pro",
+        },
+        {
+            "email": "test@rxguard.ai",
+            "password": "Test1234!",
+            "name": "QuickCare Online",
+            "plan": "free",
+        },
+    ]
+    async with get_db() as db:
+        db.row_factory = aiosqlite.Row
+        for account in demo_accounts:
+            cur = await db.execute("SELECT user_id FROM users WHERE email=?", (account["email"],))
+            existing = await cur.fetchone()
+            if not existing:
+                user_id = f"user_{hashlib.sha256(account['email'].encode()).hexdigest()[:12]}"
+                pw_hash = bcrypt.hashpw(account["password"].encode(), bcrypt.gensalt()).decode()
+                await db.execute(
+                    "INSERT INTO users(user_id, email, name, picture, password_hash, plan, "
+                    "verifications_today, created_at) VALUES(?,?,?,?,?,?,?,?)",
+                    (user_id, account["email"], account["name"], "", pw_hash,
+                     account["plan"], 0, datetime.now(timezone.utc).isoformat()),
+                )
+                await db.commit()
+
+                # Seed a demo API key for this user
+                import secrets as _secrets
+                raw_key = f"rxg_live_{_secrets.token_hex(16)}"
+                key_id = f"key_{hashlib.sha256(account['email'].encode()).hexdigest()[:10]}"
+                key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+                try:
+                    await db.execute(
+                        "INSERT OR IGNORE INTO api_keys(user_id, key_id, key_hash, name, description, calls_total) "
+                        "VALUES(?,?,?,?,?,?)",
+                        (user_id, key_id, key_hash, "Demo Key", "Auto-created demo key", random.randint(50, 500)),
+                    )
+                    await db.commit()
+                except Exception:
+                    pass
+
+
+# ─── Seed demo verifications ──────────────────────────────────────────────────
 
 SEED_RECORDS = [
-    ("xray",      "APPROVE",   0.92, 1840, 0.0028),
-    ("mri",       "REJECT",    0.91, 2100, 0.0042),
-    ("ct",        "APPROVE",   0.88, 1650, 0.0031),
-    ("xray",      "ESCALATE",  0.54, 2400, 0.0038),
-    ("xray",      "REJECT",    0.94, 1920, 0.0035),
-    ("mri",       "APPROVE",   0.85, 1520, 0.0026),
-    ("ct",        "APPROVE",   0.91, 1780, 0.0030),
-    ("ultrasound","REJECT",    0.87, 2050, 0.0039),
-    ("xray",      "APPROVE",   0.79, 1430, 0.0022),
-    ("mri",       "ESCALATE",  0.61, 2800, 0.0044),
-    ("xray",      "APPROVE",   0.95, 1620, 0.0029),
-    ("ct",        "REJECT",    0.89, 2200, 0.0041),
-    ("mri",       "APPROVE",   0.83, 1590, 0.0027),
-    ("xray",      "APPROVE",   0.90, 1710, 0.0032),
-    ("ct",        "ESCALATE",  0.58, 3100, 0.0047),
-    ("ultrasound","APPROVE",   0.86, 1480, 0.0024),
-    ("xray",      "REJECT",    0.93, 1980, 0.0037),
-    ("mri",       "APPROVE",   0.88, 1640, 0.0030),
-    ("ct",        "APPROVE",   0.82, 1560, 0.0025),
-    ("xray",      "REJECT",    0.96, 2300, 0.0043),
+    ("prescription", "APPROVE",   0.97, 1240, 0.0022),
+    ("prescription", "REJECT",    0.93, 1850, 0.0038),
+    ("prescription", "APPROVE",   0.91, 1120, 0.0019),
+    ("prescription", "ESCALATE",  0.57, 2100, 0.0031),
+    ("prescription", "REJECT",    0.95, 2050, 0.0041),
+    ("prescription", "APPROVE",   0.88, 1380, 0.0025),
+    ("prescription", "APPROVE",   0.94, 1190, 0.0021),
+    ("prescription", "REJECT",    0.89, 1920, 0.0037),
+    ("prescription", "APPROVE",   0.82, 1310, 0.0020),
+    ("prescription", "ESCALATE",  0.62, 2450, 0.0043),
+    ("prescription", "APPROVE",   0.96, 1160, 0.0018),
+    ("prescription", "REJECT",    0.91, 2180, 0.0039),
+    ("prescription", "APPROVE",   0.85, 1270, 0.0023),
+    ("prescription", "APPROVE",   0.93, 1350, 0.0024),
+    ("prescription", "ESCALATE",  0.59, 2800, 0.0047),
+    ("prescription", "APPROVE",   0.87, 1420, 0.0022),
+    ("prescription", "REJECT",    0.94, 1980, 0.0040),
+    ("prescription", "APPROVE",   0.90, 1230, 0.0021),
+    ("prescription", "APPROVE",   0.83, 1290, 0.0020),
+    ("prescription", "REJECT",    0.97, 2140, 0.0042),
 ]
 
 RATIONALES = {
     "APPROVE": [
-        "Image metadata is consistent with authentic clinical acquisition. "
-        "Visual forensics detected no frequency artifacts characteristic of SDXL or diffusion models. "
-        "Clinical anatomy presents normal plausibility for the stated modality.",
-        "Perceptual hash analysis shows no match against synthetic hash database. "
-        "FFT spectrum analysis reveals natural noise patterns without grid artifacts. "
-        "Anatomical landmarks are consistent with real human physiology.",
-        "EXIF and DICOM metadata confirm authentic scanner origin. "
-        "HuggingFace AI-image detectors returned low confidence (< 15%) for synthetic generation. "
-        "Clinical plausibility assessment confirms normal imaging characteristics.",
+        "Prescription metadata is consistent with authentic clinical issuance. "
+        "Doctor NPI number verified against national registry. "
+        "Signature forensics shows natural pen stroke variation consistent with human writing. "
+        "Medication dosage within clinical norms for stated diagnosis.",
+        "Document security features intact — watermark, holographic seal detected. "
+        "Prescriber license active and in good standing. "
+        "Drug interaction analysis shows no contraindications for the patient profile.",
+        "EXIF metadata confirms prescription originated from a licensed medical practice. "
+        "AI forgery detectors returned low synthetic probability (< 8%). "
+        "Clinical plausibility assessment confirms prescription follows standard formatting.",
     ],
     "REJECT": [
-        "Image exhibits characteristic SDXL frequency artifacts in the high-frequency spectrum. "
-        "AI detector ensemble returned 92% synthetic probability. "
-        "Anatomical structures show subtle impossibilities inconsistent with real physiology.",
-        "FFT analysis detected periodic grid patterns at 64px intervals, a hallmark of GAN generation. "
-        "DICOM metadata is absent or inconsistent with manufacturer standards. "
-        "Clinical review identified unnatural tissue density gradients.",
-        "Perceptual hash matched 3 known synthetic images in the hash database. "
-        "AI probability score of 0.91 from ensemble of HuggingFace detectors. "
-        "Visual anomalies include mirrored anatomical asymmetry not present in authentic scans.",
+        "Document shows signs of digital manipulation — inconsistent font kerning detected in medication name. "
+        "Prescriber NPI number does not match DEA registration database. "
+        "Signature pattern analysis indicates potential forgery with 94% confidence.",
+        "Prescription form template does not match any recognized licensed pad design. "
+        "FFT analysis reveals JPEG compression artifacts inconsistent with scanner origin. "
+        "Date appears to have been altered — pixel-level inconsistency detected around timestamp.",
+        "AI image detector ensemble returned 91% synthetic probability. "
+        "Doctor's seal appears digitally superimposed rather than physically stamped. "
+        "Medication quantity exceeds maximum allowed single-fill amount for controlled substance.",
     ],
     "ESCALATE": [
         "Inconclusive results from the detection pipeline. "
-        "Weighted trust score of 0.54 falls within the uncertainty band. "
-        "Recommend human radiologist review before processing claim.",
+        "Weighted trust score of 0.57 falls within the uncertainty band. "
+        "Recommend pharmacist manual review before dispensing.",
         "Mixed signals from detection agents. "
-        "Forensics shows moderate AI probability (58%) but clinical plausibility is normal. "
-        "Forwarded to compliance team for manual verification.",
-        "Pipeline timed out partially; forensics agent returned partial result with hf_failed flag. "
-        "Precautionary ESCALATE applied as per degradation policy. "
-        "Human review recommended.",
+        "Signature appears authentic but prescriber location data is inconsistent. "
+        "Forwarded to compliance team for verification.",
+        "Prescription form partially obscured — forensics agent returned partial result. "
+        "Precautionary escalation applied per degradation policy. "
+        "Human review recommended before processing.",
     ],
 }
 
 
 async def seed_demo_data():
-    """Insert demo records if table is empty."""
-    async with aiosqlite.connect(DB_PATH) as db:
+    """Insert demo prescription records if table is empty."""
+    async with get_db() as db:
         c = await db.execute("SELECT COUNT(*) FROM verifications")
         count = (await c.fetchone())[0]
         if count > 0:
-            return  # Already seeded
+            return
 
     now = datetime.now(timezone.utc)
     for i, (mod, verdict, conf, lat, cost) in enumerate(SEED_RECORDS):
         dt = now - timedelta(hours=random.randint(0, 168))
-        audit_id = f"AEG-{dt.strftime('%Y%m%d')}-{i+1:05d}"
+        audit_id = f"RXG-{dt.strftime('%Y%m%d')}-{i+1:05d}"
         fake_sha = hashlib.sha256(f"seed-{i}".encode()).hexdigest()
 
-        intake = {"score": round(random.uniform(0.6, 0.95), 3), "metadata_complete": True, "anomalies": []}
-        forensics = {"score": conf - 0.05 + random.uniform(-0.1, 0.1),
-                     "ai_probability": 1 - conf + 0.05,
-                     "evidence": [{"detector": "sdxl-detector", "score": 1 - conf}]}
-        clinical = {"score": round(conf + random.uniform(-0.08, 0.08), 3),
-                    "plausibility": round(conf + random.uniform(-0.08, 0.08), 3),
-                    "impossibilities": [] if verdict != "REJECT" else [{"description": "Artifact detected", "bbox": [0.3, 0.2, 0.6, 0.7]}]}
+        intake = {
+            "score": round(random.uniform(0.6, 0.95), 3),
+            "metadata_complete": True,
+            "npi_verified": verdict == "APPROVE",
+            "anomalies": [],
+        }
+        forensics = {
+            "score": conf - 0.05 + random.uniform(-0.1, 0.1),
+            "ai_probability": 1 - conf + 0.05,
+            "evidence": [{"detector": "sdxl-detector", "score": 1 - conf}],
+        }
+        clinical = {
+            "score": round(conf + random.uniform(-0.08, 0.08), 3),
+            "plausibility": round(conf + random.uniform(-0.08, 0.08), 3),
+            "impossibilities": [] if verdict != "REJECT" else [
+                {"description": "Dosage exceeds maximum clinical threshold"}
+            ],
+        }
 
         rationale = random.choice(RATIONALES[verdict])
-
-        heatmap_path = f"heatmaps/seed_{i:03d}.png" if verdict == "REJECT" else None
 
         row = {
             "audit_id": audit_id,
             "created_at": dt.isoformat(),
             "image_sha256": fake_sha,
-            "image_path": f"uploads/seed_{i:03d}.png",
-            "heatmap_path": heatmap_path,
+            "image_path": f"uploads/seed_{i:03d}.jpg",
+            "heatmap_path": f"heatmaps/seed_{i:03d}.png" if verdict == "REJECT" else None,
             "modality": mod,
             "verdict": verdict,
             "confidence": conf,
@@ -423,14 +509,13 @@ async def seed_demo_data():
         }
         await write_verification(row)
 
-        # Log ironlabs calls for cost chart
-        models_used = [
-            ("intake", "gpt-4o-mini", "metadata_extraction", 180, cost * 0.05),
-            ("forensics", "gpt-4o-mini", "forensics_analysis", 450, cost * 0.25),
-            ("clinical", "claude-haiku-4-5-20251001", "clinical_reasoning", 380, cost * 0.30),
-            ("verdict", "claude-sonnet-4-6", "critical_decision", 320, cost * 0.40),
-        ]
-        async with aiosqlite.connect(DB_PATH) as db:
+        async with get_db() as db:
+            models_used = [
+                ("intake", "gpt-4o-mini", "metadata_extraction", 180, cost * 0.05),
+                ("forensics", "gpt-4o-mini", "forensics_analysis", 450, cost * 0.25),
+                ("clinical", "claude-haiku-4-5-20251001", "clinical_reasoning", 380, cost * 0.30),
+                ("verdict", "claude-sonnet-4-6", "critical_decision", 320, cost * 0.40),
+            ]
             for agent, model, task, tokens, mcost in models_used:
                 await db.execute(
                     "INSERT INTO ironlabs_calls (audit_id, agent, model, task_type, tokens, cost_usd, latency_ms) "

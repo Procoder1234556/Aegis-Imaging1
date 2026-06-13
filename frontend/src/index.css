@@ -2,103 +2,311 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── CSS Variables ─────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   CSS Custom Properties — Light (default) + Dark mode
+═══════════════════════════════════════════════════════════ */
 :root {
   --sidebar-w: 240px;
   --header-h: 64px;
-  --color-bg: #F2F4F8;
-  --color-sidebar: #232E32;
-  --color-blue: #1B47DB;
-  --color-blue-soft: #94B5E3;
-  --color-blue-light: #EEF3FF;
-  --color-blue-mid: #6997E4;
-  --color-terracotta: #B26552;
-  --color-approve: #22C55E;
-  --color-escalate: #D97706;
-  --color-text: #1C2B34;
-  --color-muted: #7B8FA6;
-  --color-border: #E8EDF5;
-  --color-white: #FFFFFF;
+
+  /* Brand */
+  --color-blue:        #1B47DB;
+  --color-blue-hover:  #1436A3;
+  --color-blue-soft:   #94B5E3;
+  --color-blue-light:  #EEF3FF;
+  --color-blue-mid:    #6997E4;
+  --color-terracotta:  #B26552;
+  --color-approve:     #22C55E;
+  --color-escalate:    #D97706;
+
+  /* Light mode surfaces */
+  --color-bg:       #F2F4F8;
+  --color-surface:  #FFFFFF;
+  --color-sidebar:  #232E32;
+  --color-text:     #1C2B34;
+  --color-muted:    #7B8FA6;
+  --color-border:   #E8EDF5;
+  --color-gray:     #9B9B9B;
+  --color-gray-lt:  #EBEBEC;
+
+  /* PharmEasy-inspired accent strip */
+  --pharma-green:   #4CAF50;
+  --pharma-strip:   #E8F5E9;
+  --pharma-orange:  #FF6F00;
+  --pharma-badge:   #FFF3E0;
 }
 
-/* ── Base ──────────────────────────────────────────────────── */
+/* Dark mode overrides */
+[data-theme="dark"] {
+  --color-bg:       #0D1117;
+  --color-surface:  #161B22;
+  --color-sidebar:  #0D1117;
+  --color-text:     #E8EDF5;
+  --color-muted:    #8B949E;
+  --color-border:   #30363D;
+  --color-gray:     #6B7280;
+  --color-gray-lt:  #1F2937;
+  --color-blue-light: rgba(27,71,219,0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Base
+═══════════════════════════════════════════════════════════ */
 @layer base {
-  html { font-family: 'Onest', system-ui, sans-serif; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
-  body { @apply bg-aegis-bg text-aegis-text; }
+  html {
+    font-family: 'Onest', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
   * { box-sizing: border-box; }
   code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 99px; }
 }
 
-/* ── Components ────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   Component Layer
+═══════════════════════════════════════════════════════════ */
 @layer components {
 
-  /* White card */
+  /* ── Cards ───────────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-2xl border border-aegis-border;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(27,71,219,0.05);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.3s ease;
   }
-  .card:hover { box-shadow: 0 4px 24px rgba(27,71,219,0.10); }
-
+  .card:hover   { box-shadow: 0 4px 24px rgba(27,71,219,0.10); }
   .card-lift:hover { transform: translateY(-2px); }
 
-  /* Primary button */
+  /* 3D card (existing compat) */
+  .card-3d {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(27,71,219,0.05);
+  }
+
+  /* PharmEasy-style white card */
+  .pharma-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.2s ease;
+  }
+  .pharma-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
   .btn-blue {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white;
-    @apply transition-all duration-200 active:scale-95;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.625rem 1.25rem; border-radius: 0.75rem;
+    font-weight: 600; font-size: 0.875rem; color: white;
     background: linear-gradient(135deg, #1B47DB, #3B67F5);
     box-shadow: 0 4px 14px rgba(27,71,219,0.28);
+    transition: all 0.2s ease;
   }
-  .btn-blue:hover { box-shadow: 0 6px 20px rgba(27,71,219,0.38); transform: translateY(-1px); }
+  .btn-blue:hover      { box-shadow: 0 6px 20px rgba(27,71,219,0.38); transform: translateY(-1px); }
+  .btn-blue:active     { transform: scale(0.97); }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.625rem 1.5rem; border-radius: 0.75rem;
+    font-weight: 600; font-size: 0.875rem; color: white;
+    background: linear-gradient(135deg, #1B47DB, #3B67F5);
+    box-shadow: 0 4px 14px rgba(27,71,219,0.28);
+    transition: all 0.2s ease;
+  }
+  .btn-primary:hover { box-shadow: 0 6px 20px rgba(27,71,219,0.38); transform: translateY(-1px); }
+
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 1rem; border-radius: 0.75rem;
+    font-weight: 500; font-size: 0.875rem;
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    transition: all 0.2s ease;
+  }
+  .btn-secondary:hover { color: var(--color-blue); border-color: rgba(27,71,219,0.3); background: var(--color-blue-light); }
 
   .btn-ghost {
-    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm;
-    @apply text-aegis-muted border border-aegis-border bg-white transition-all duration-200;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.625rem 1rem; border-radius: 0.75rem;
+    font-weight: 500; font-size: 0.875rem;
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    transition: all 0.2s ease;
   }
-  .btn-ghost:hover { @apply text-aegis-blue border-aegis-blue/30 bg-aegis-blueLight; }
+  .btn-ghost:hover { color: var(--color-blue); border-color: rgba(27,71,219,0.3); background: var(--color-blue-light); }
 
-  /* KPI Tile */
-  .kpi-tile { @apply card p-6 flex flex-col gap-1; }
+  /* PharmEasy-style green button */
+  .btn-pharma {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.75rem 2rem; border-radius: 2rem;
+    font-weight: 700; font-size: 0.875rem; color: white;
+    background: linear-gradient(135deg, #22C55E, #16A34A);
+    box-shadow: 0 4px 14px rgba(34,197,94,0.3);
+    transition: all 0.2s ease;
+  }
+  .btn-pharma:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,0.4); }
 
-  /* Verdict chips */
-  .chip-approve  { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200; }
-  .chip-reject   { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200; }
-  .chip-escalate { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200; }
+  /* ── Inputs ──────────────────────────────────────────────── */
+  .input-field {
+    width: 100%; padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  .input-field::placeholder { color: var(--color-muted); }
+  .input-field:focus {
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 3px rgba(27,71,219,0.08);
+  }
 
-  /* Sidebar nav item */
+  /* ── Navigation ──────────────────────────────────────────── */
   .nav-item {
-    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium;
-    @apply transition-all duration-150 cursor-pointer;
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.625rem 1rem; border-radius: 0.75rem;
+    font-size: 0.875rem; font-weight: 500;
     color: rgba(255,255,255,0.55);
+    transition: all 0.15s ease;
+    cursor: pointer;
   }
   .nav-item:hover  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
   .nav-item.active { background: #1B47DB; color: #fff; box-shadow: 0 4px 12px rgba(27,71,219,0.35); }
 
-  /* Input */
-  .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-aegis-border bg-white text-sm text-aegis-text;
-    @apply outline-none transition-all duration-200;
+  /* ── Verdict chips ───────────────────────────────────────── */
+  .chip-approve  { display:inline-flex; align-items:center; gap:0.375rem; padding:0.25rem 0.625rem; border-radius:0.5rem; font-size:0.75rem; font-weight:600; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+  .chip-reject   { display:inline-flex; align-items:center; gap:0.375rem; padding:0.25rem 0.625rem; border-radius:0.5rem; font-size:0.75rem; font-weight:600; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+  .chip-escalate { display:inline-flex; align-items:center; gap:0.375rem; padding:0.25rem 0.625rem; border-radius:0.5rem; font-size:0.75rem; font-weight:600; background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+
+  /* ── Verdict banners ─────────────────────────────────────── */
+  .verdict-approve  { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #bbf7d0; }
+  .verdict-reject   { background: linear-gradient(135deg, #fef2f2, #fee2e2); border: 1px solid #fecaca; }
+  .verdict-escalate { background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a; }
+
+  /* ── KPI tiles ───────────────────────────────────────────── */
+  .kpi-tile { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 1rem; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+
+  /* ── Progress bar ────────────────────────────────────────── */
+  .progress-bar  { height: 0.375rem; border-radius: 9999px; background: var(--color-gray-lt); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 9999px; }
+
+  /* ── Theme toggle button ─────────────────────────────────── */
+  .theme-toggle {
+    width: 2.5rem; height: 2.5rem; border-radius: 0.75rem;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
   }
-  .input-field:focus { @apply border-aegis-blue; box-shadow: 0 0 0 3px rgba(27,71,219,0.08); }
+  .theme-toggle:hover { color: var(--color-blue); border-color: rgba(27,71,219,0.3); }
 
-  /* Progress bar */
-  .progress-bar  { @apply h-1.5 rounded-full bg-aegis-grayLight overflow-hidden; }
-  .progress-fill { @apply h-full rounded-full; }
+  /* ── Avatar circle ───────────────────────────────────────── */
+  .avatar-circle {
+    width: 2.5rem; height: 2.5rem; border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.875rem; color: white;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+  }
+  .avatar-circle:hover { transform: scale(1.05); }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar       { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-aegis-border rounded-full; }
+  /* ── PharmEasy-inspired category tile ───────────────────── */
+  .pharma-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 0.625rem;
+    padding: 1rem 0.75rem; border-radius: 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    cursor: pointer; transition: all 0.2s ease;
+    text-align: center;
+  }
+  .pharma-tile:hover { border-color: var(--color-blue); box-shadow: 0 4px 16px rgba(27,71,219,0.1); transform: translateY(-2px); }
+
+  /* ── JSON viewer ─────────────────────────────────────────── */
+  .json-viewer {
+    background: var(--color-gray-lt);
+    color: var(--color-text);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    overflow: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+  }
 }
 
-/* ── Utilities ─────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   Utilities
+═══════════════════════════════════════════════════════════ */
 @layer utilities {
-  .gradient-blue { background: linear-gradient(135deg, #1B47DB, #3B67F5); }
+  .gradient-blue   { background: linear-gradient(135deg, #1B47DB, #3B67F5); }
   .text-blue-gradient {
     background: linear-gradient(135deg, #1B47DB, #6997E4);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  .text-balance { text-wrap: balance; }
+  .text-balance    { text-wrap: balance; }
+  .font-onest      { font-family: 'Onest', sans-serif; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Animations
+═══════════════════════════════════════════════════════════ */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes float-up {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes count-ticker {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Print styles (for PDF download)
+═══════════════════════════════════════════════════════════ */
+@media print {
+  .no-print, aside, nav, header, .sidebar-nav, button:not(.print-show) {
+    display: none !important;
+  }
+  body { background: white !important; color: black !important; }
+  .card, .card-3d {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+  @page { margin: 1.5cm; }
 }
