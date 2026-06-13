@@ -69,8 +69,17 @@ Hackathon submission with judges PPT section, live stats, social proof, API key 
 - [x] News cards clickable → open source publication in new tab
 - [x] Project renamed: RxGuard → Aegis Imaging throughout
 
+### Phase 3 (2026-06-14) — AI Verification Overhaul
+- [x] ai_detector.py — Local forensic analysis (ELA+FFT+Noise+Color+Edge) as primary
+- [x] Gemini 2.5 Flash as fallback (triggered on ESCALATE 0.35-0.65 range)
+- [x] GEMINI_API_KEY added to backend/.env
+- [x] hf_detector.py replaced by ai_detector.py (server.py import updated)
+- [x] Landing page tech stack updated to reflect Gemini instead of HuggingFace/SDXL
+- [x] Full test suite: 9/9 backend + frontend all passing (iteration_4.json)
+
 ## Environment Variables Required
 ### Backend (.env)
+- GEMINI_API_KEY=<user-provided, set in backend/.env>
 - RESEND_API_KEY=<get from resend.com>
 - SENDER_EMAIL=onboarding@resend.dev (or verified domain)
 - DATABASE_URL, SECRET_KEY, IRONLABS_API_KEY, EMERGENT_LLM_KEY, STRIPE_API_KEY (all set)
