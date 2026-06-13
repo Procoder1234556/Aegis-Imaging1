@@ -69,7 +69,14 @@ Hackathon submission with judges PPT section, live stats, social proof, API key 
 - [x] News cards clickable → open source publication in new tab
 - [x] Project renamed: RxGuard → Aegis Imaging throughout
 
-### Phase 3 (2026-06-14) — AI Verification Overhaul
+### Phase 4 (2026-06-13) — Hackathon Landing + Shareable Reports
+- [x] /api/readme endpoint — serves live README.md rendered in Judges section
+- [x] /api/rss endpoint — proxies live FDA RSS feed (fallback to curated news)
+- [x] Landing.js JudgesSection — renders real README with markdown parser (headings, code, tables, lists)
+- [x] Landing.js NewsSection — live RSS feed with source indicator (Live/Curated)
+- [x] Profile.js PDF export — real jsPDF report with stats, header, audit table, branding
+- [x] Profile.js social share — LinkedIn, WhatsApp, Twitter/X, Copy Link buttons
+- [x] Full test suite: 10/10 passing (iteration_5.json)
 - [x] ai_detector.py — Local forensic analysis (ELA+FFT+Noise+Color+Edge) as primary
 - [x] Gemini 2.5 Flash as fallback (triggered on ESCALATE 0.35-0.65 range)
 - [x] GEMINI_API_KEY added to backend/.env

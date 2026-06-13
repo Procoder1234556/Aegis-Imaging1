@@ -66,11 +66,123 @@ export default function Profile() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const downloadReports = () => window.print();
+  const downloadReports = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      let y = 20;
+
+      // Header bar
+      doc.setFillColor(27, 71, 219);
+      doc.rect(0, 0, pageW, 14, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AEGIS IMAGING — Verification Report', 14, 9.5);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated: ${new Date().toLocaleString()}`, pageW - 14, 9.5, { align: 'right' });
+
+      y = 28;
+      // User info
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text(user?.name || 'Pharmacy User', 14, y);
+      y += 6;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(`${user?.email || ''} · Plan: ${(user?.plan || 'free').toUpperCase()}`, 14, y);
+      y += 10;
+
+      // Stats summary boxes
+      const statBoxes = [
+        { label: 'Total Verified', val: stats.total, color: [27, 71, 219] },
+        { label: 'Valid', val: stats.valid, color: [34, 197, 94] },
+        { label: 'Forged', val: stats.forged, color: [178, 101, 82] },
+        { label: 'Under Review', val: stats.suspicious, color: [217, 119, 6] },
+      ];
+      const bw = (pageW - 28 - 9) / 4;
+      statBoxes.forEach((s, i) => {
+        const bx = 14 + i * (bw + 3);
+        doc.setFillColor(...s.color);
+        doc.roundedRect(bx, y, bw, 14, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(s.val), bx + bw / 2, y + 8, { align: 'center' });
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.text(s.label, bx + bw / 2, y + 12.5, { align: 'center' });
+      });
+      y += 22;
+
+      // Table header
+      doc.setFillColor(245, 247, 255);
+      doc.rect(14, y, pageW - 28, 8, 'F');
+      doc.setTextColor(60, 60, 100);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      const cols = [14, 60, 108, 138, 165];
+      ['Audit ID', 'Date', 'Verdict', 'Confidence', 'Latency'].forEach((h, i) => doc.text(h, cols[i], y + 5.5));
+      y += 10;
+
+      // Table rows
+      doc.setFont('helvetica', 'normal');
+      const verdictColor = { APPROVE: [22, 163, 74], REJECT: [220, 38, 38], ESCALATE: [217, 119, 6] };
+      audits.forEach((a, idx) => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        const rowBg = idx % 2 === 0;
+        if (rowBg) { doc.setFillColor(250, 251, 255); doc.rect(14, y - 1, pageW - 28, 8, 'F'); }
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(8);
+        doc.text(a.audit_id || '-', cols[0], y + 4.5);
+        doc.text(new Date(a.created_at).toLocaleDateString(), cols[1], y + 4.5);
+        const vc = verdictColor[a.verdict] || [100, 100, 100];
+        doc.setTextColor(...vc);
+        doc.setFont('helvetica', 'bold');
+        doc.text(a.verdict || '-', cols[2], y + 4.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(30, 30, 30);
+        doc.text(`${Math.round((a.confidence || 0) * 100)}%`, cols[3], y + 4.5);
+        doc.text(a.latency ? `${a.latency}ms` : '-', cols[4], y + 4.5);
+        y += 8;
+      });
+
+      // Footer
+      doc.setFillColor(240, 240, 255);
+      doc.rect(0, 285, pageW, 12, 'F');
+      doc.setTextColor(120, 120, 160);
+      doc.setFontSize(7);
+      doc.text('Aegis Imaging · Prescription Verification API · aegis-imaging.ai', pageW / 2, 292, { align: 'center' });
+
+      doc.save(`aegis-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      window.print();
+    }
+  };
 
   const shareOnTwitter = () => {
     const text = encodeURIComponent(`I've verified ${audits.length}+ prescriptions with Aegis Imaging AI. Join me in fighting prescription fraud!`);
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.origin)}`, '_blank');
+  };
+
+  const shareOnLinkedIn = () => {
+    const url = encodeURIComponent(window.location.origin);
+    const title = encodeURIComponent('Aegis Imaging — AI Prescription Verification');
+    const summary = encodeURIComponent(`I've been using Aegis Imaging to verify ${audits.length}+ prescriptions with AI. Check it out!`);
+    window.open(`https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${title}&summary=${summary}`, '_blank');
+  };
+
+  const shareOnWhatsApp = () => {
+    const text = encodeURIComponent(`Check out Aegis Imaging — AI-powered prescription verification!\n${window.location.origin}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
   const stats = {
@@ -340,29 +452,39 @@ export default function Profile() {
                 </div>
 
                 {/* Share + Download buttons */}
-                <div className="flex items-center gap-2 no-print">
+                <div className="flex items-center gap-2 no-print flex-wrap">
                   <button onClick={downloadReports} data-testid="download-reports-btn"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
-                    style={{ color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                    style={{ color: '#1D4ED8', border: '1px solid #BFDBFE', background: '#EFF6FF' }}>
                     <Download className="w-3.5 h-3.5" /> Export PDF
                   </button>
                   <button onClick={() => { setEmailTo(user?.email || ''); setEmailModal(audits[0] || null); }}
                     disabled={!audits.length}
                     data-testid="email-latest-report-btn"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
                     style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
-                    <Send className="w-3.5 h-3.5" /> Email Report
+                    <Send className="w-3.5 h-3.5" /> Email
                   </button>
                   <button onClick={shareOnTwitter} data-testid="share-twitter-btn"
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
-                    style={{ color: '#1D9BF0', border: '1px solid #BFDBFE', background: '#EFF6FF' }}>
-                    <Twitter className="w-3.5 h-3.5" /> Share
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                    style={{ color: '#1D9BF0', border: '1px solid #BAE6FD', background: '#F0F9FF' }}>
+                    <Twitter className="w-3.5 h-3.5" /> X
+                  </button>
+                  <button onClick={shareOnLinkedIn} data-testid="share-linkedin-btn"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                    style={{ color: '#0A66C2', border: '1px solid #BFDBFE', background: '#EFF6FF' }}>
+                    <Linkedin className="w-3.5 h-3.5" /> LinkedIn
+                  </button>
+                  <button onClick={shareOnWhatsApp} data-testid="share-whatsapp-btn"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                    style={{ color: '#16A34A', border: '1px solid #BBF7D0', background: '#F0FDF4' }}>
+                    <Share2 className="w-3.5 h-3.5" /> WhatsApp
                   </button>
                   <button onClick={copyProfileLink} data-testid="copy-profile-link-btn"
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
                     style={{ color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
                     {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? 'Copied!' : 'Copy Link'}
+                    {copied ? 'Copied!' : 'Link'}
                   </button>
                 </div>
               </div>

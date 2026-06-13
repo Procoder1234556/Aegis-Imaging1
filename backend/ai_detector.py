@@ -177,17 +177,17 @@ def analyze_metadata(meta: dict) -> tuple:
 
 
 # ─────────────────────────────────────────────
-# Gemini Verify (called for EVERY image)
+# Groq Verify (called for EVERY image)
 # ─────────────────────────────────────────────
 
-async def _gemini_verify(image_bytes: bytes, filename: str) -> tuple:
+async def _groq_verify(image_bytes: bytes, filename: str) -> tuple:
     """
-    Always-on Gemini image verification — called for every upload.
+    Always-on Groq vision verification — called for every upload.
     Returns (result_dict, None) on success or (None, error_message) on failure.
     """
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("EMERGENT_LLM_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        return None, "Gemini API key is not configured."
+        return None, "Groq API key is not configured."
 
     ext = Path(filename).suffix.lower() or ".jpg"
     mime_map = {
@@ -196,67 +196,70 @@ async def _gemini_verify(image_bytes: bytes, filename: str) -> tuple:
     }
     mime_type = mime_map.get(ext, "image/jpeg")
 
-    tmp_path = None
     try:
-        from emergentintegrations.llm.chat import (
-            LlmChat, UserMessage, FileContentWithMimeType, TextDelta, StreamDone
+        import base64
+        from groq import Groq
+
+        client = Groq(api_key=api_key)
+        b64 = base64.b64encode(image_bytes).decode()
+        data_url = f"data:{mime_type};base64,{b64}"
+
+        completion = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a forensic image analyst. Analyze images to determine if they are "
+                        "AI-generated or real photographs/scanned documents. "
+                        "Always respond with only valid JSON, no markdown."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                "Examine this image carefully. Is it AI-generated or a real photograph/scanned document? "
+                                "Consider: unnatural textures, AI diffusion artifacts, smooth gradients, "
+                                "absence of camera noise, handwriting authenticity, paper/printing signs. "
+                                'Respond with ONLY this JSON: {"is_ai_generated": true, "confidence": 0.85, "reasoning": "brief reason"}'
+                            ),
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": data_url},
+                        },
+                    ],
+                },
+            ],
+            temperature=0,
+            max_completion_tokens=256,
+            response_format={"type": "json_object"},
         )
 
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
-            f.write(image_bytes)
-            tmp_path = f.name
-
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"aegis-{uuid.uuid4().hex[:8]}",
-            system_message=(
-                "You are a forensic image analyst specializing in detecting AI-generated images. "
-                "Always respond with only valid JSON."
-            ),
-        ).with_model("gemini", "gemini-2.5-flash")
-
-        image_file = FileContentWithMimeType(file_path=tmp_path, mime_type=mime_type)
-
-        prompt = (
-            "Examine this image carefully and determine whether it is AI-generated or a real photograph/scanned document. "
-            "Consider: unnatural textures, AI diffusion artifacts, overly smooth gradients, absence of camera sensor noise, "
-            "handwriting authenticity, paper/printing signs. "
-            "Respond with ONLY this JSON (no markdown, no extra text): "
-            '{"is_ai_generated": true, "confidence": 0.85, "reasoning": "brief reason"}'
-        )
-
-        response_text = ""
-        async for ev in chat.stream_message(
-            UserMessage(text=prompt, file_contents=[image_file])
-        ):
-            if isinstance(ev, TextDelta):
-                response_text += ev.content
-            elif isinstance(ev, StreamDone):
-                break
-
+        response_text = completion.choices[0].message.content or ""
         match = re.search(r'\{.*?\}', response_text, re.DOTALL)
         if match:
             parsed = json.loads(match.group())
             return {
                 "is_ai_generated": bool(parsed.get("is_ai_generated", False)),
                 "confidence": float(parsed.get("confidence", 0.5)),
-                "reasoning": str(parsed.get("reasoning", "Gemini analysis complete.")),
-                "model": "gemini-2.5-flash",
+                "reasoning": str(parsed.get("reasoning", "Groq analysis complete.")),
+                "model": "llama-4-scout-17b (Groq)",
             }, None
 
-        return None, "Gemini returned an unreadable response. Please try again."
+        return None, "Groq returned an unreadable response. Please try again."
 
     except Exception as e:
         raw = str(e).lower()
-        if any(kw in raw for kw in ["quota", "resource_exhausted", "429", "rate limit", "billing", "insufficient"]):
-            return None, "Your Gemini API key quota is exhausted. Please top up your key or replace it."
-        if any(kw in raw for kw in ["authenticationerror", "api_key_invalid", "api key not valid", "invalid api key", "unauthenticated", "permission_denied"]):
-            return None, "Your Gemini API key is invalid or expired. Please replace it."
-        print(f"[Gemini verify error]: {e}")
-        return None, "Gemini verification is temporarily unavailable. Please try again shortly."
-    finally:
-        if tmp_path:
-            Path(tmp_path).unlink(missing_ok=True)
+        if any(kw in raw for kw in ["quota", "rate_limit", "rate limit", "429", "billing", "insufficient"]):
+            return None, "Your Groq API key quota is exhausted. Please top up your key or replace it."
+        if any(kw in raw for kw in ["invalid api key", "authentication", "api key", "401", "403"]):
+            return None, "Your Groq API key is invalid or expired. Please replace it."
+        print(f"[Groq verify error]: {e}")
+        return None, "Groq verification is temporarily unavailable. Please try again shortly."
 
 
 # ─────────────────────────────────────────────
@@ -364,20 +367,20 @@ async def run_verification(
             "error":      str(e),
         }
 
-    # ── Gemini verify — called for EVERY image ──────────────
-    gemini, gemini_error = await _gemini_verify(image_bytes, filename)
-    if gemini:
-        gemini_used = True
-        verdict    = "REJECT" if gemini["is_ai_generated"] else "APPROVE"
-        confidence = round(gemini["confidence"], 3)
-        rationale  = f"Gemini AI: {gemini['reasoning']}"
-        forensics_json["gemini_analysis"] = gemini
-        forensics_json["model"] = f"gemini-2.5-flash + local-forensic-v1"
+    # ── Groq verify — called for EVERY image ────────────────
+    groq_result, groq_error = await _groq_verify(image_bytes, filename)
+    if groq_result:
+        gemini_used = True   # reuse flag as "ai_verified"
+        verdict    = "REJECT" if groq_result["is_ai_generated"] else "APPROVE"
+        confidence = round(groq_result["confidence"], 3)
+        rationale  = f"Groq AI: {groq_result['reasoning']}"
+        forensics_json["groq_analysis"] = groq_result
+        forensics_json["model"] = f"{groq_result['model']} + local-forensic-v1"
     else:
-        # Gemini unavailable — do NOT return an unverified result
+        # Groq unavailable — do NOT return an unverified result
         raise HTTPException(
             status_code=503,
-            detail=gemini_error or "Gemini verification unavailable. Please try again.",
+            detail=groq_error or "Groq verification unavailable. Please try again.",
         )
 
     latency_ms = round((time.time() - t0) * 1000)
@@ -407,6 +410,6 @@ async def run_verification(
         "orchestrator_json":  {
             "pipeline":   forensics_json["model"],
             "latency_ms": latency_ms,
-            "gemini_used": gemini_used,
+            "groq_used": gemini_used,
         },
     }
