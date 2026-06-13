@@ -39,7 +39,7 @@ export default function SideBar() {
           <Shield className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
         <div>
-          <span className="text-white font-bold text-sm tracking-tight">RxGuard</span>
+          <span className="text-white font-bold text-sm tracking-tight">Aegis Imaging</span>
           <span className="text-[#6997E4] font-medium text-sm ml-1">API</span>
         </div>
       </div>

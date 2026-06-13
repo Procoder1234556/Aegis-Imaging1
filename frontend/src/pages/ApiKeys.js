@@ -307,11 +307,11 @@ export default function ApiKeys() {
             <p className="text-[#546e7a]"># POST prescription image with your API key</p>
             <p className="mt-2">
               <span style={{ color: '#c792ea' }}>curl</span>
-              <span style={{ color: '#CDD6F4' }}> -X POST https://api.rxguard.ai/v1/verify \</span>
+              <span style={{ color: '#CDD6F4' }}> -X POST https://api.aegis-imaging.ai/v1/verify \</span>
             </p>
             <p>
               <span style={{ color: '#CDD6F4' }}>  -H </span>
-              <span style={{ color: '#c3e88d' }}>"X-API-Key: rxg_live_your_key_here"</span>
+              <span style={{ color: '#c3e88d' }}>"X-API-Key: aeg_live_your_key_here"</span>
               <span style={{ color: '#CDD6F4' }}> \</span>
             </p>
             <p>

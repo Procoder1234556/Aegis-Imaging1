@@ -68,7 +68,7 @@ export default function Profile() {
   const downloadReports = () => window.print();
 
   const shareOnTwitter = () => {
-    const text = encodeURIComponent(`I've verified ${audits.length}+ prescriptions with RxGuard AI. Join me in fighting prescription fraud!`);
+    const text = encodeURIComponent(`I've verified ${audits.length}+ prescriptions with Aegis Imaging AI. Join me in fighting prescription fraud!`);
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.origin)}`, '_blank');
   };
 

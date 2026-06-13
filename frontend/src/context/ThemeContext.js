@@ -3,11 +3,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem('rxguard-theme') || 'light');
+  const [theme, setTheme] = useState(() => localStorage.getItem('aegis-imaging-theme') || 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('rxguard-theme', theme);
+    localStorage.setItem('aegis-imaging-theme', theme);
   }, [theme]);
 
   const toggle = () => setTheme(t => t === 'light' ? 'dark' : 'light');

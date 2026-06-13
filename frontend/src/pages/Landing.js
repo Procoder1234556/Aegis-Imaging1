@@ -53,9 +53,9 @@ const HERO_CODE = `<span style="color:#c792ea">const</span> form = <span style="
 form.<span style="color:#82aaff">append</span>(<span style="color:#c3e88d">'file'</span>, prescriptionFile);
 form.<span style="color:#82aaff">append</span>(<span style="color:#c3e88d">'pharmacy_id'</span>, <span style="color:#c3e88d">'PH-2845'</span>);
 
-<span style="color:#c792ea">const</span> res = <span style="color:#82aaff">await</span> <span style="color:#ffd580">fetch</span>(<span style="color:#c3e88d">'https://api.rxguard.ai/v1/verify'</span>, {
+<span style="color:#c792ea">const</span> res = <span style="color:#82aaff">await</span> <span style="color:#ffd580">fetch</span>(<span style="color:#c3e88d">'https://api.aegis-imaging.ai/v1/verify'</span>, {
   method: <span style="color:#c3e88d">'POST'</span>,
-  headers: { <span style="color:#c3e88d">'X-API-Key'</span>: <span style="color:#c3e88d">'rxg_live_xxxxxxxx'</span> },
+  headers: { <span style="color:#c3e88d">'X-API-Key'</span>: <span style="color:#c3e88d">'aeg_live_xxxxxxxx'</span> },
   body: form
 });
 
@@ -99,10 +99,10 @@ const PPT_SLIDES = [
 
 const LEADERS = [
   { quote: "Prescription fraud is a $4B epidemic. AI verification at checkout is the only scalable solution.", name: "Dr. Sarah Chen", role: "Chief Pharmacy Officer, HealthNet", avatar: "SC" },
-  { quote: "We integrated RxGuard into our checkout in under an hour. The API docs are excellent and support is fast.", name: "James Patel", role: "CTO, MedPlus Online", avatar: "JP" },
+  { quote: "We integrated Aegis Imaging into our checkout in under an hour. The API docs are excellent and support is fast.", name: "James Patel", role: "CTO, MedPlus Online", avatar: "JP" },
   { quote: "The SHA-256 audit chain means we have a defensible compliance record for every dispensed prescription.", name: "Maria Torres", role: "Compliance Director, PharmaCo", avatar: "MT" },
-  { quote: "RxGuard catches what our pharmacists miss — subtle digital manipulation that's invisible to the human eye.", name: "Dr. Robert Kim", role: "Medical Director, TeleCare Rx", avatar: "RK" },
-  { quote: "We went from 3% fraud detection to 94% after deploying RxGuard. The ROI was evident in 2 weeks.", name: "Alex Novak", role: "Operations Head, FastRx", avatar: "AN" },
+  { quote: "Aegis Imaging catches what our pharmacists miss — subtle digital manipulation that's invisible to the human eye.", name: "Dr. Robert Kim", role: "Medical Director, TeleCare Rx", avatar: "RK" },
+  { quote: "We went from 3% fraud detection to 94% after deploying Aegis Imaging. The ROI was evident in 2 weeks.", name: "Alex Novak", role: "Operations Head, FastRx", avatar: "AN" },
   { quote: "For any online pharmacy handling controlled substances, this isn't optional — it's essential infrastructure.", name: "Jennifer Walsh", role: "Regulatory Counsel, PharmaLegal", avatar: "JW" },
 ];
 
@@ -116,12 +116,12 @@ const REVIEWS = [
 ];
 
 const NEWS = [
-  { source: "Pharmacy Times", tag: "Regulation", title: "FDA Strengthens Guidelines on E-Prescription Verification for Controlled Substances", date: "Jun 14, 2026" },
-  { source: "Drug Topics", tag: "Fraud", title: "Online Pharmacy Fraud Costs Healthcare $4.2B Annually, New Study Confirms", date: "Jun 13, 2026" },
-  { source: "Healthcare IT News", tag: "Technology", title: "AI-Powered Prescription Verification Reduces Fraud by 94% in Clinical Trial", date: "Jun 12, 2026" },
-  { source: "APhA Journal", tag: "Industry", title: "76% of Online Pharmacies Face Prescription Forgery Attempts Monthly", date: "Jun 11, 2026" },
-  { source: "MedCity News", tag: "Compliance", title: "New State Laws Mandate Automated Prescription Authenticity Checks by 2027", date: "Jun 10, 2026" },
-  { source: "Modern Healthcare", tag: "Telehealth", title: "Telehealth Boom Drives Surge in Forged Prescriptions — API Solutions Emerge", date: "Jun 9, 2026" },
+  { source: "Pharmacy Times", tag: "Regulation", title: "FDA Strengthens Guidelines on E-Prescription Verification for Controlled Substances", date: "Jun 14, 2026", url: "https://www.pharmacytimes.com/search#q=e-prescription%20verification&t=All" },
+  { source: "Drug Topics", tag: "Fraud", title: "Online Pharmacy Fraud Costs Healthcare $4.2B Annually, New Study Confirms", date: "Jun 13, 2026", url: "https://www.drugtopics.com/search#q=prescription%20fraud&t=All" },
+  { source: "Healthcare IT News", tag: "Technology", title: "AI-Powered Prescription Verification Reduces Fraud by 94% in Clinical Trial", date: "Jun 12, 2026", url: "https://www.healthcareitnews.com/topic/fraud-and-security" },
+  { source: "APhA Journal", tag: "Industry", title: "76% of Online Pharmacies Face Prescription Forgery Attempts Monthly", date: "Jun 11, 2026", url: "https://www.japha.org/searchresults?query=prescription+forgery" },
+  { source: "MedCity News", tag: "Compliance", title: "New State Laws Mandate Automated Prescription Authenticity Checks by 2027", date: "Jun 10, 2026", url: "https://medcitynews.com/?s=prescription+compliance" },
+  { source: "Modern Healthcare", tag: "Telehealth", title: "Telehealth Boom Drives Surge in Forged Prescriptions — API Solutions Emerge", date: "Jun 9, 2026", url: "https://www.modernhealthcare.com/topic/telehealth" },
 ];
 
 const PLANS = [
@@ -151,7 +151,7 @@ function Nav({ scrolled }) {
           <div className="w-8 h-8 rounded-lg bg-[#1B47DB] flex items-center justify-center">
             <Shield className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-bold text-lg tracking-tight">RxGuard</span>
+          <span className="text-white font-bold text-lg tracking-tight">Aegis Imaging</span>
           <span className="hidden sm:block text-xs text-white/40 ml-1 border border-white/10 rounded px-1.5 py-0.5">API</span>
         </div>
 
@@ -323,7 +323,7 @@ function JudgesSection() {
             </div>
             <div className="space-y-5 text-sm leading-relaxed">
               <div>
-                <h3 className="text-white font-bold text-lg mb-1">RxGuard — Prescription Verification API</h3>
+                <h3 className="text-white font-bold text-lg mb-1">Aegis Imaging — Prescription Verification API</h3>
                 <p className="text-white/50">An AI-powered SaaS platform that helps online pharmacies verify prescription authenticity in under 2 seconds via a simple REST API.</p>
               </div>
               <div>
@@ -336,8 +336,8 @@ function JudgesSection() {
               </div>
               <div>
                 <h4 className="text-[#F59E0B] font-semibold mb-2">Quick Start</h4>
-                <CodeBlock compact lang="bash" code={`curl -X POST https://api.rxguard.ai/v1/verify \\
-  -H "X-API-Key: rxg_live_xxx" \\
+                <CodeBlock compact lang="bash" code={`curl -X POST https://api.aegis-imaging.ai/v1/verify \\
+  -H "X-API-Key: aeg_live_xxx" \\
   -F "file=@prescription.jpg"`} />
               </div>
             </div>
@@ -459,8 +459,8 @@ function FeaturesSection() {
 /* ─── How It Works ─────────────────────────────────────────────────────────── */
 function HowItWorksSection() {
   const steps = [
-    { num: '1', title: 'Get Your API Key', desc: 'Sign up free and generate your first API key from the dashboard. No credit card required.', code: `curl https://api.rxguard.ai/v1/keys \\<br/>  -H "Authorization: Bearer <token>"` },
-    { num: '2', title: 'Submit Prescription', desc: 'POST the prescription image to our endpoint with your API key. Supports JPG, PNG, PDF, DICOM.', code: `curl -X POST /v1/verify \\<br/>  -H "X-API-Key: rxg_live_xxx" \\<br/>  -F "file=@rx.jpg"` },
+    { num: '1', title: 'Get Your API Key', desc: 'Sign up free and generate your first API key from the dashboard. No credit card required.', code: `curl https://api.aegis-imaging.ai/v1/keys \\<br/>  -H "Authorization: Bearer <token>"` },
+    { num: '2', title: 'Submit Prescription', desc: 'POST the prescription image to our endpoint with your API key. Supports JPG, PNG, PDF, DICOM.', code: `curl -X POST /v1/verify \\<br/>  -H "X-API-Key: aeg_live_xxx" \\<br/>  -F "file=@rx.jpg"` },
     { num: '3', title: 'Receive Verdict', desc: 'Get VALID/FORGED/SUSPICIOUS in under 2 seconds with confidence score and full audit ID.', code: `{ "verdict": "VALID",<br/>  "confidence": 0.97,<br/>  "audit_id": "RXG-2026..." }` },
   ];
   return (
@@ -506,8 +506,15 @@ function NewsSection() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {NEWS.map((n, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
-              className="bg-white/[0.03] border border-white/8 rounded-xl p-5 hover:border-white/20 transition-all cursor-pointer group">
+            <motion.a
+              key={i}
+              href={n.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid={`news-card-${i}`}
+              initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}
+              className="bg-white/[0.03] border border-white/8 rounded-xl p-5 hover:border-white/20 transition-all cursor-pointer group block"
+              style={{ textDecoration: 'none' }}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: tagColors[n.tag], background: tagColors[n.tag] + '15' }}>{n.tag}</span>
                 <span className="text-xs text-white/30 ml-auto">{n.source}</span>
@@ -515,9 +522,9 @@ function NewsSection() {
               <h3 className="text-sm text-white/80 font-medium leading-snug mb-3 group-hover:text-white transition-colors">{n.title}</h3>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-white/30">{n.date}</span>
-                <ExternalLink className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 transition-colors" />
+                <ExternalLink className="w-3.5 h-3.5 text-white/20 group-hover:text-white/70 transition-colors" />
               </div>
-            </motion.div>
+            </motion.a>
           ))}
         </div>
       </div>
@@ -626,7 +633,7 @@ function Footer() {
               <div className="w-7 h-7 rounded-lg bg-[#1B47DB] flex items-center justify-center">
                 <Shield className="w-4 h-4 text-white" />
               </div>
-              <span className="text-white font-bold">RxGuard</span>
+              <span className="text-white font-bold">Aegis Imaging</span>
             </div>
             <p className="text-xs text-white/40 leading-relaxed">AI-powered prescription verification for the modern online pharmacy.</p>
           </div>
@@ -644,7 +651,7 @@ function Footer() {
           ))}
         </div>
         <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span className="text-xs text-white/30">© 2026 RxGuard. All rights reserved.</span>
+          <span className="text-xs text-white/30">© 2026 Aegis Imaging. All rights reserved.</span>
           <div className="flex items-center gap-4 text-xs text-white/30">
             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" /> API Status: Operational</span>
             <span>v3.0.0</span>

@@ -112,7 +112,7 @@ export default function Login() {
             <div className="w-9 h-9 rounded-xl bg-[#1B47DB] flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">RxGuard</span>
+            <span className="text-white font-bold text-lg tracking-tight">Aegis Imaging</span>
           </div>
 
           {/* Avatar preview (register mode) */}
@@ -165,7 +165,7 @@ export default function Login() {
             <div className="w-7 h-7 rounded-lg bg-[#1B47DB] flex items-center justify-center">
               <Shield className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>RxGuard</span>
+            <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>Aegis Imaging</span>
           </div>
           <div className="hidden lg:block" />
 

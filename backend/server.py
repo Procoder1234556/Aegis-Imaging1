@@ -1,5 +1,5 @@
 """
-RxGuard — FastAPI Backend v3
+Aegis Imaging — FastAPI Backend v3
 Prescription Verification API + Auth + Payments + API Keys
 """
 import os
@@ -31,7 +31,7 @@ from auth import router as auth_router, get_current_user, optional_user, FREE_DA
 from payments import router as payments_router
 from email_router import router as email_router
 
-app = FastAPI(title="RxGuard API", version="3.0.0", docs_url="/api/docs")
+app = FastAPI(title="Aegis Imaging API", version="3.0.0", docs_url="/api/docs")
 
 app.add_middleware(
     CORSMiddleware,
@@ -87,7 +87,7 @@ async def stripe_webhook(request: Request):
 # ─── Health ────────────────────────────────────────────────────────────────────
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "rxguard", "version": "3.0.0"}
+    return {"status": "ok", "service": "aegis-imaging", "version": "3.0.0"}
 
 
 # ─── Verify (internal, plan-limited) ──────────────────────────────────────────
@@ -256,7 +256,7 @@ async def create_api_key(body: CreateKeyRequest, request: Request):
             f"Plan limit reached ({max_keys} active keys). Upgrade to create more.",
         )
 
-    raw_key = f"rxg_live_{secrets.token_hex(20)}"
+    raw_key = f"aeg_live_{secrets.token_hex(20)}"
     key_id  = f"key_{uuid.uuid4().hex[:10]}"
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
 

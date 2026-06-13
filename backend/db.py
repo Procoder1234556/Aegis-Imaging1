@@ -1,5 +1,5 @@
 """
-RxGuard — Database layer (SQLite via aiosqlite)
+Aegis Imaging — Database layer (SQLite via aiosqlite)
 Handles: init, hash-chain, CRUD, seed demo data, api keys, users.
 """
 import aiosqlite
@@ -348,13 +348,13 @@ async def seed_demo_users():
     import bcrypt
     demo_accounts = [
         {
-            "email": "demo@rxguard.ai",
+            "email": "demo@aegis-imaging.ai",
             "password": "Demo1234!",
             "name": "MedPlus Pharmacy",
             "plan": "pro",
         },
         {
-            "email": "test@rxguard.ai",
+            "email": "test@aegis-imaging.ai",
             "password": "Test1234!",
             "name": "QuickCare Online",
             "plan": "free",
@@ -378,7 +378,7 @@ async def seed_demo_users():
 
                 # Seed a demo API key for this user
                 import secrets as _secrets
-                raw_key = f"rxg_live_{_secrets.token_hex(16)}"
+                raw_key = f"aeg_live_{_secrets.token_hex(16)}"
                 key_id = f"key_{hashlib.sha256(account['email'].encode()).hexdigest()[:10]}"
                 key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
                 try:
