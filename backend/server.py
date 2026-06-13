@@ -26,7 +26,7 @@ from db import (
     init_db, seed_demo_data, seed_demo_users, get_db,
     get_dashboard_data, get_audit_record, get_recent_audits, log_mock_event,
 )
-from orchestrator import AsyncOrchestrator
+from hf_detector import run_verification
 from auth import router as auth_router, get_current_user, optional_user, FREE_DAILY_LIMIT
 from payments import router as payments_router
 from email_router import router as email_router
@@ -47,8 +47,6 @@ if Path("data").exists():
 app.include_router(auth_router)
 app.include_router(payments_router)
 app.include_router(email_router)
-
-orchestrator = AsyncOrchestrator()
 
 
 @app.on_event("startup")
@@ -132,19 +130,18 @@ async def verify_image(
         raise HTTPException(400, "File too large (max 20MB)")
 
     sha256 = hashlib.sha256(contents).hexdigest()
-    save_ext = ext if ext in allowed_ext else ".jpg"
+    save_ext = Path(file.filename or "upload.jpg").suffix.lower() or ".jpg"
     image_path = Path(f"data/uploads/{sha256}{save_ext}")
     image_path.write_bytes(contents)
 
-    context = {
-        "image_path": str(image_path),
-        "image_bytes": contents,
-        "image_sha256": sha256,
-        "modality": modality,
-        "filename": file.filename,
-        "user_id": user["user_id"] if user else None,
-    }
-    return await orchestrator.run(context)
+    result = await run_verification(
+        image_bytes=contents,
+        filename=file.filename or "upload.jpg",
+        user_id=user["user_id"] if user else None,
+    )
+    from db import write_verification
+    await write_verification(result)
+    return result
 
 
 # ─── External API endpoint (uses API key header) ───────────────────────────────
@@ -211,16 +208,15 @@ async def verify_prescription_external(
     image_path = Path(f"data/uploads/{sha256}{ext}")
     image_path.write_bytes(contents)
 
-    context = {
-        "image_path": str(image_path),
-        "image_bytes": contents,
-        "image_sha256": sha256,
-        "modality": "prescription",
-        "filename": file.filename,
-        "user_id": key_row["user_id"],
-        "api_key_id": key_row["key_id"],
-    }
-    return await orchestrator.run(context)
+    result = await run_verification(
+        image_bytes=contents,
+        filename=file.filename or "upload.jpg",
+        user_id=key_row["user_id"],
+        api_key_id=key_row["key_id"],
+    )
+    from db import write_verification
+    await write_verification(result)
+    return result
 
 
 # ─── API Key Management ─────────────────────────────────────────────────────────

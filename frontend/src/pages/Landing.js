@@ -193,7 +193,7 @@ function Hero({ liveStats }) {
   return (
     <section className="relative min-h-screen flex flex-col justify-center overflow-hidden pt-20">
       {/* Grid lines background */}
-      <div className="absolute inset-0 opacity-[0.04]"
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
         style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
       {/* Glow */}
       <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />

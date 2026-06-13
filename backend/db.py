@@ -143,9 +143,11 @@ CREATE TABLE IF NOT EXISTS mock_ehr_events (
 async def init_db():
     async with get_db() as db:
         await db.executescript(CREATE_TABLES)
-        # Safe migrations — ignore if column already exists
+        # Safe migrations — ignored if column already exists
         for stmt in [
-            "ALTER TABLE api_keys ADD COLUMN calls_today_date TEXT DEFAULT ''",
+            "ALTER TABLE api_keys      ADD COLUMN calls_today_date TEXT DEFAULT ''",
+            "ALTER TABLE verifications ADD COLUMN user_id    TEXT",
+            "ALTER TABLE verifications ADD COLUMN api_key_id TEXT",
         ]:
             try:
                 await db.execute(stmt)
