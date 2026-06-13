@@ -154,7 +154,9 @@ async def register(body: RegisterRequest, response: Response):
 
     token = await _create_session(user_id)
     _set_session_cookie(response, token)
-    return {"session_token": token, "user_id": user_id, "email": body.email, "plan": "free"}
+    return {"session_token": token, "user_id": user_id, "email": body.email,
+            "name": body.name or body.email.split("@")[0],
+            "picture": picture, "plan": "free"}
 
 
 @router.post("/login")
@@ -175,7 +177,8 @@ async def login(body: LoginRequest, response: Response):
     token = await _create_session(user["user_id"])
     _set_session_cookie(response, token)
     return {"session_token": token, "user_id": user["user_id"],
-            "email": user["email"], "name": user["name"], "plan": user["plan"]}
+            "email": user["email"], "name": user["name"],
+            "picture": user["picture"] or "", "plan": user["plan"]}
 
 
 @router.get("/google")

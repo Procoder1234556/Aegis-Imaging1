@@ -228,10 +228,11 @@ function Hero({ liveStats }) {
               className="flex items-center gap-2 bg-[#1B47DB] hover:bg-[#1436A3] text-white px-6 py-3.5 rounded-xl font-semibold transition-all hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-0.5">
               Start Free — 100 Verifications <ArrowRight className="w-4 h-4" />
             </button>
-            <a href="#judges"
+            <button
+              onClick={() => document.getElementById('judges')?.scrollIntoView({ behavior: 'smooth' })}
               className="flex items-center gap-2 text-white/70 hover:text-white border border-white/15 hover:border-white/30 px-6 py-3.5 rounded-xl font-medium transition-all">
               <Award className="w-4 h-4" /> View for Judges
-            </a>
+            </button>
           </motion.div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}

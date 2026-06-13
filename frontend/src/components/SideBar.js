@@ -7,7 +7,7 @@ import clsx from 'clsx';
 const NAV = [
   { to: '/verify',    icon: Upload,    label: 'Verify Prescription' },
   { to: '/dashboard', icon: BarChart3, label: 'Dashboard' },
-  { to: '/api-keys',  icon: Key,       label: 'API Keys' },
+  { to: '/keys',      icon: Key,       label: 'API Keys' },
   { to: '/billing',   icon: CreditCard,label: 'Billing' },
 ];
 

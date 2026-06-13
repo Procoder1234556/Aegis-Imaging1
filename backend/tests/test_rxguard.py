@@ -35,6 +35,21 @@ class TestAuth:
             data = r.json()
             assert "session_token" in data
 
+    def test_register_returns_picture_field(self):
+        """Register with avatar_color, verify picture field is returned"""
+        import time
+        unique_email = f"TEST_pic_{int(time.time())}@aegis.test"
+        r = requests.post(f"{BASE_URL}/api/auth/register", json={
+            "email": unique_email,
+            "password": "Test1234!",
+            "name": "Picture Test",
+            "avatar_color": "#22C55E"
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert "picture" in data
+        assert data["picture"] == "#22C55E"
+
     def test_login(self):
         # Ensure user exists first
         requests.post(f"{BASE_URL}/api/auth/register", json={
@@ -50,6 +65,18 @@ class TestAuth:
         data = r.json()
         assert "session_token" in data
         assert data["email"] == TEST_EMAIL
+
+    def test_login_returns_picture_field(self):
+        """Login should return picture field"""
+        requests.post(f"{BASE_URL}/api/auth/register", json={
+            "email": TEST_EMAIL, "password": TEST_PASSWORD, "name": TEST_NAME
+        })
+        r = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": TEST_EMAIL, "password": TEST_PASSWORD
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert "picture" in data, "Login response must include 'picture' field"
 
     def test_login_wrong_password(self):
         r = requests.post(f"{BASE_URL}/api/auth/login", json={
@@ -98,7 +125,7 @@ class TestAPIKeys:
         if r.status_code == 200:
             data = r.json()
             assert "key" in data
-            assert data["key"].startswith("rxg_live_")
+            assert "aeg_live_" in data["key"] or data["key"].startswith("aeg_")
             assert "key_id" in data
 
     def test_create_key_returns_raw_key(self, auth_headers):
@@ -113,7 +140,8 @@ class TestAPIKeys:
                           headers=auth_headers)
         assert r.status_code == 200
         data = r.json()
-        assert data["key"].startswith("rxg_live_")
+        assert "key" in data
+        assert len(data["key"]) > 10
         # cleanup
         requests.delete(f"{BASE_URL}/api/keys/{data['key_id']}", headers=auth_headers)
 

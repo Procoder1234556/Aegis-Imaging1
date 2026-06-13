@@ -46,7 +46,8 @@ export default function Profile() {
   const initials = user?.name ? user.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() : 'U';
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return; }
+    if (user === undefined) return;          // still loading, wait
+    if (user === null) { navigate('/login'); return; }  // confirmed logged out
     fetch(`${API_BASE}/api/v1/audits?limit=20`)
       .then(r => r.json())
       .then(d => setAudits(d.audits || []))
@@ -107,6 +108,17 @@ export default function Profile() {
       setEmailSending(false);
     }
   };
+
+  if (user === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-bg)' }}>
+        <div className="flex items-center gap-3" style={{ color: 'var(--color-muted)' }}>
+          <div className="w-5 h-5 border-2 border-[#1B47DB] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium">Loading…</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) return null;
 
@@ -267,7 +279,7 @@ export default function Profile() {
               <p className="text-xs font-semibold mb-3" style={{ color: 'var(--color-muted)' }}>Quick Actions</p>
               {[
                 { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
-                { icon: Key,       label: 'API Keys',  path: '/api-keys' },
+                { icon: Key,       label: 'API Keys',  path: '/keys' },
                 { icon: FileText,  label: 'Verify Prescription', path: '/verify' },
               ].map(a => (
                 <button key={a.label} onClick={() => navigate(a.path)} data-testid={`profile-action-${a.label.toLowerCase().replace(/ /g,'-')}`}

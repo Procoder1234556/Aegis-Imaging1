@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 Allow: /login
 Disallow: /dashboard
-Disallow: /api-keys
+Disallow: /keys
 Disallow: /billing
 Disallow: /verify
 Disallow: /verifying/
