@@ -30,6 +30,46 @@ def compute_chain_hash(prev_hash: str, record: dict) -> str:
 # ─── Schema ───────────────────────────────────────────────────────────────────
 
 CREATE_TABLES = """
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT DEFAULT '',
+    picture TEXT DEFAULT '',
+    password_hash TEXT DEFAULT '',
+    google_id TEXT DEFAULT '',
+    plan TEXT DEFAULT 'free',
+    verifications_today INTEGER DEFAULT 0,
+    verifications_month INTEGER DEFAULT 0,
+    stripe_customer_id TEXT DEFAULT '',
+    reset_date TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    session_token TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(session_token);
+
+CREATE TABLE IF NOT EXISTS payment_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    session_id TEXT UNIQUE NOT NULL,
+    payment_id TEXT DEFAULT '',
+    amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'usd',
+    plan TEXT DEFAULT 'pro',
+    status TEXT DEFAULT 'pending',
+    payment_status TEXT DEFAULT 'unpaid',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_payments_session ON payment_transactions(session_id);
+
 CREATE TABLE IF NOT EXISTS verifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     audit_id TEXT UNIQUE NOT NULL,

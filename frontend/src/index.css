@@ -1,203 +1,104 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    scroll-behavior: smooth;
-  }
-
-  body {
-    @apply bg-aegis-bg text-slate-700;
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  code, pre {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  }
+/* ── CSS Variables ─────────────────────────────────────────── */
+:root {
+  --sidebar-w: 240px;
+  --header-h: 64px;
+  --color-bg: #F2F4F8;
+  --color-sidebar: #232E32;
+  --color-blue: #1B47DB;
+  --color-blue-soft: #94B5E3;
+  --color-blue-light: #EEF3FF;
+  --color-blue-mid: #6997E4;
+  --color-terracotta: #B26552;
+  --color-approve: #22C55E;
+  --color-escalate: #D97706;
+  --color-text: #1C2B34;
+  --color-muted: #7B8FA6;
+  --color-border: #E8EDF5;
+  --color-white: #FFFFFF;
 }
 
+/* ── Base ──────────────────────────────────────────────────── */
+@layer base {
+  html { font-family: 'Onest', system-ui, sans-serif; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  body { @apply bg-aegis-bg text-aegis-text; }
+  * { box-sizing: border-box; }
+  code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+}
+
+/* ── Components ────────────────────────────────────────────── */
 @layer components {
-  /* Glass card effect */
-  .glass-card {
-    @apply bg-white/90 border border-white/60 rounded-2xl;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9);
-  }
 
-  .glass-card-hover {
-    @apply transition-all duration-300 ease-out;
-  }
-
-  .glass-card-hover:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 40px rgba(15,42,71,0.12), inset 0 1px 0 rgba(255,255,255,0.95);
-  }
-
-  /* 3D Card effect */
-  .card-3d {
+  /* White card */
+  .card {
     @apply bg-white rounded-2xl border border-aegis-border;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 20px rgba(0,0,0,0.06);
-    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(27,71,219,0.05);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
   }
+  .card:hover { box-shadow: 0 4px 24px rgba(27,71,219,0.10); }
 
-  .card-3d:hover {
-    transform: translateY(-4px) scale(1.005);
-    box-shadow: 0 8px 32px rgba(15,42,71,0.14);
-  }
+  .card-lift:hover { transform: translateY(-2px); }
 
-  /* Premium button */
-  .btn-primary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white;
+  /* Primary button */
+  .btn-blue {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white;
     @apply transition-all duration-200 active:scale-95;
-    background: linear-gradient(135deg, #0F2A47, #2E5C8A);
-    box-shadow: 0 4px 14px rgba(15,42,71,0.3);
+    background: linear-gradient(135deg, #1B47DB, #3B67F5);
+    box-shadow: 0 4px 14px rgba(27,71,219,0.28);
   }
+  .btn-blue:hover { box-shadow: 0 6px 20px rgba(27,71,219,0.38); transform: translateY(-1px); }
 
-  .btn-primary:hover {
-    box-shadow: 0 6px 20px rgba(15,42,71,0.4);
-    transform: translateY(-1px);
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm;
+    @apply text-aegis-muted border border-aegis-border bg-white transition-all duration-200;
   }
+  .btn-ghost:hover { @apply text-aegis-blue border-aegis-blue/30 bg-aegis-blueLight; }
 
-  .btn-secondary {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm;
-    @apply bg-white border border-aegis-border text-aegis-navy;
-    @apply transition-all duration-200 hover:border-aegis-blue hover:shadow-md active:scale-95;
-  }
+  /* KPI Tile */
+  .kpi-tile { @apply card p-6 flex flex-col gap-1; }
 
-  /* Verdict banners */
-  .verdict-approve {
-    @apply bg-gradient-to-r from-green-50 to-transparent border-l-4 border-aegis-approve rounded-r-2xl;
-  }
+  /* Verdict chips */
+  .chip-approve  { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200; }
+  .chip-reject   { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200; }
+  .chip-escalate { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200; }
 
-  .verdict-reject {
-    @apply bg-gradient-to-r from-red-50 to-transparent border-l-4 border-aegis-reject rounded-r-2xl;
+  /* Sidebar nav item */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium;
+    @apply transition-all duration-150 cursor-pointer;
+    color: rgba(255,255,255,0.55);
   }
+  .nav-item:hover  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
+  .nav-item.active { background: #1B47DB; color: #fff; box-shadow: 0 4px 12px rgba(27,71,219,0.35); }
 
-  .verdict-escalate {
-    @apply bg-gradient-to-r from-amber-50 to-transparent border-l-4 border-aegis-escalate rounded-r-2xl;
+  /* Input */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-aegis-border bg-white text-sm text-aegis-text;
+    @apply outline-none transition-all duration-200;
   }
-
-  /* Agent card states */
-  .agent-pending {
-    @apply bg-slate-50 border-slate-200 text-slate-400;
-  }
-
-  .agent-running {
-    @apply bg-blue-50 border-blue-300 text-blue-600;
-    animation: pulseBlue 1.5s ease-in-out infinite;
-  }
-
-  .agent-done {
-    @apply bg-green-50 border-green-300 text-green-700;
-  }
-
-  .agent-error {
-    @apply bg-red-50 border-red-300 text-red-600;
-  }
-
-  /* Shimmer loading effect */
-  .shimmer {
-    background: linear-gradient(
-      90deg,
-      rgba(255,255,255,0) 0%,
-      rgba(255,255,255,0.6) 50%,
-      rgba(255,255,255,0) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s linear infinite;
-  }
-
-  /* Page entrance animation */
-  .page-enter {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  .page-enter-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.4s ease, transform 0.4s ease;
-  }
-
-  /* Hash chain styling */
-  .hash-box {
-    @apply font-mono text-xs px-4 py-3 rounded-lg border;
-    @apply bg-aegis-navy/5 border-aegis-blue/30 text-aegis-navy;
-    word-break: break-all;
-  }
+  .input-field:focus { @apply border-aegis-blue; box-shadow: 0 0 0 3px rgba(27,71,219,0.08); }
 
   /* Progress bar */
-  .progress-bar {
-    @apply h-2 rounded-full overflow-hidden bg-slate-100;
-  }
-
-  .progress-fill {
-    @apply h-full rounded-full transition-all duration-1000 ease-out;
-  }
-
-  /* Scan line animation */
-  .scan-container {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .scan-line {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #2E5C8A, transparent);
-    opacity: 0.6;
-    animation: scanLine 2s ease-in-out infinite;
-  }
-
-  /* Metric tile */
-  .metric-tile {
-    @apply card-3d p-6;
-  }
+  .progress-bar  { @apply h-1.5 rounded-full bg-aegis-grayLight overflow-hidden; }
+  .progress-fill { @apply h-full rounded-full; }
 
   /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-aegis-bg;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-aegis-border rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-aegis-slate;
-  }
+  ::-webkit-scrollbar       { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-aegis-border rounded-full; }
 }
 
+/* ── Utilities ─────────────────────────────────────────────── */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  .gradient-text {
-    background: linear-gradient(135deg, #0F2A47, #2E5C8A);
+  .gradient-blue { background: linear-gradient(135deg, #1B47DB, #3B67F5); }
+  .text-blue-gradient {
+    background: linear-gradient(135deg, #1B47DB, #6997E4);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-}
-
-/* Framer Motion page transition wrapper */
-.motion-page {
-  width: 100%;
+  .text-balance { text-wrap: balance; }
 }

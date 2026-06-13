@@ -1,13 +1,13 @@
 """
-Aegis Imaging — FastAPI Backend
-Port 8001 | Supervisor managed
+Aegis Imaging — FastAPI Backend v2
+Port 8001 | Auth + Payments + Verification Pipeline
 """
 import os
 import hashlib
 from pathlib import Path
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -15,14 +15,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Ensure data dirs
 for d in ("data/uploads", "data/heatmaps", "data/hf_cache"):
     Path(d).mkdir(parents=True, exist_ok=True)
 
 from db import init_db, seed_demo_data, get_dashboard_data, get_audit_record, get_recent_audits, log_mock_event
 from orchestrator import AsyncOrchestrator
+from auth import router as auth_router, get_current_user, optional_user, FREE_DAILY_LIMIT
+from payments import router as payments_router
 
-app = FastAPI(title="Aegis Imaging API", version="1.0.0", docs_url="/api/docs")
+app = FastAPI(title="Aegis Imaging API", version="2.0.0", docs_url="/api/docs")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,9 +33,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve uploads + heatmaps
 if Path("data").exists():
     app.mount("/static", StaticFiles(directory="data"), name="static")
+
+app.include_router(auth_router)
+app.include_router(payments_router)
 
 orchestrator = AsyncOrchestrator()
 
@@ -45,34 +48,86 @@ async def startup():
     await seed_demo_data()
 
 
-# ─── Health ───────────────────────────────────────────────────────────────────
+# ─── Stripe webhook (top-level path) ─────────────────────────
+@app.post("/api/webhook/stripe")
+async def stripe_webhook(request: Request):
+    import os
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout
+    body = await request.body()
+    sig  = request.headers.get("Stripe-Signature", "")
+    stripe = StripeCheckout(api_key=os.getenv("STRIPE_API_KEY",""), webhook_url="")
+    try:
+        event = await stripe.handle_webhook(body, sig)
+        if event.payment_status == "paid":
+            meta = event.metadata or {}
+            uid  = meta.get("user_id")
+            plan = meta.get("plan", "pro")
+            if uid:
+                from db import get_db
+                async with await get_db() as db:
+                    await db.execute("UPDATE users SET plan=? WHERE user_id=?", (plan, uid))
+                    await db.execute(
+                        "UPDATE payment_transactions SET status='completed',payment_status='paid' WHERE session_id=?",
+                        (event.session_id,),
+                    )
+                    await db.commit()
+    except Exception:
+        pass
+    return {"received": True}
 
+
+# ─── Health ───────────────────────────────────────────────────
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "aegis-imaging", "version": "1.0.0"}
+    return {"status": "ok", "service": "aegis-imaging", "version": "2.0.0"}
 
 
-# ─── Core API ─────────────────────────────────────────────────────────────────
-
+# ─── Verify (protected, plan-limited) ─────────────────────────
 @app.post("/api/v1/verify")
 async def verify_image(
+    request: Request,
     file: UploadFile = File(...),
     modality: str = Form("xray"),
 ):
-    # Content-type validation
-    allowed_types = {"image/jpeg", "image/png", "image/jpg", "application/octet-stream", "application/dicom"}
-    allowed_ext   = {".png", ".jpg", ".jpeg", ".dcm"}
+    user = await optional_user(request)
+
+    # Plan check
+    if user and user["plan"] == "free":
+        today = datetime.now(timezone.utc).date().isoformat()
+        from db import get_db
+        async with await get_db() as db:
+            db.row_factory = __import__("aiosqlite").Row
+            cur = await db.execute(
+                "SELECT COUNT(*) as cnt FROM verifications "
+                "WHERE audit_id LIKE ? AND date(created_at)=date('now')",
+                (f"%{user.get('user_id','none')}%",),
+            )
+            # simplified: track verifications_today on user row
+            cur2 = await db.execute("SELECT verifications_today, reset_date FROM users WHERE user_id=?",
+                                    (user["user_id"],))
+            u = await cur2.fetchone()
+            if u:
+                reset_date = u["reset_date"] or ""
+                today_str = today
+                v_today = u["verifications_today"] if reset_date == today_str else 0
+                if v_today >= FREE_DAILY_LIMIT:
+                    raise HTTPException(429, f"Free plan: {FREE_DAILY_LIMIT} verifications/day. Upgrade for unlimited.")
+                # Update count
+                await db.execute(
+                    "UPDATE users SET verifications_today=?, reset_date=? WHERE user_id=?",
+                    (v_today + 1, today_str, user["user_id"])
+                )
+                await db.commit()
+
+    # File validation
+    allowed_ext = {".png", ".jpg", ".jpeg", ".dcm"}
     fname = (file.filename or "upload.png").lower()
     ext   = Path(fname).suffix
-
-    if file.content_type not in allowed_types and ext not in allowed_ext:
-        raise HTTPException(400, detail="Unsupported file type. Use PNG, JPEG, or DICOM.")
-
     contents = await file.read()
-    if len(contents) == 0:
-        raise HTTPException(400, detail="Empty file.")
+    if not contents:
+        raise HTTPException(400, "Empty file")
     if len(contents) > 20 * 1024 * 1024:
-        raise HTTPException(400, detail="File too large (max 20MB).")
+        raise HTTPException(400, "File too large (max 20MB)")
 
     sha256 = hashlib.sha256(contents).hexdigest()
     save_ext = ext if ext in allowed_ext else ".png"
@@ -85,18 +140,16 @@ async def verify_image(
         "image_sha256": sha256,
         "modality": modality,
         "filename": file.filename,
+        "user_id": user["user_id"] if user else None,
     }
-
-    result = await orchestrator.run(context)
-    return result
+    return await orchestrator.run(context)
 
 
 @app.get("/api/v1/audit/{audit_id}")
-async def get_audit(audit_id: str):
+async def get_audit(audit_id: str, request: Request):
     record = await get_audit_record(audit_id)
     if not record:
-        raise HTTPException(404, detail="Audit record not found.")
-    # Serialize agent outputs
+        raise HTTPException(404, "Audit record not found")
     for field in ("intake_json", "forensics_json", "clinical_json", "orchestrator_json"):
         record.setdefault(field, {})
     return {
@@ -136,14 +189,14 @@ async def get_dashboard():
 
 
 @app.post("/api/v1/mock-ehr")
-async def mock_ehr_webhook(request: Request):
+async def mock_ehr(request: Request):
     payload = await request.json()
     await log_mock_event("mock-ehr", payload)
-    return {"status": "received", "endpoint": "mock-ehr", "audit_id": payload.get("audit_id")}
+    return {"status": "received"}
 
 
 @app.post("/api/v1/mock-claims")
-async def mock_claims_webhook(request: Request):
+async def mock_claims(request: Request):
     payload = await request.json()
     await log_mock_event("mock-claims", payload)
-    return {"status": "received", "endpoint": "mock-claims", "audit_id": payload.get("audit_id")}
+    return {"status": "received"}

@@ -7,9 +7,15 @@ export default function NavBar() {
   const location = useLocation();
 
   const navLinks = [
-    { to: '/', label: 'Verify', icon: Upload },
+    { to: '/verify', label: 'Verify', icon: Upload },
     { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   ];
+
+  const isActive = (to) => {
+    if (to === '/verify') return location.pathname === '/verify';
+    if (to === '/dashboard') return location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/audit');
+    return false;
+  };
 
   return (
     <nav
@@ -46,7 +52,8 @@ export default function NavBar() {
         <div className="flex items-center gap-1">
           {navLinks.map(({ to, label, icon: Icon }) => {
             const isActive = location.pathname === to ||
-              (to === '/dashboard' && location.pathname.startsWith('/dashboard'));
+              (to === '/verify' && location.pathname === '/verify') ||
+              (to === '/dashboard' && (location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/audit')));
             return (
               <Link
                 key={to}
