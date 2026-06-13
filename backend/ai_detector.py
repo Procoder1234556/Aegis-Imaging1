@@ -33,6 +33,7 @@ from typing import Optional
 import numpy as np
 import cv2
 from PIL import Image, ImageChops, ImageEnhance, ImageFilter
+from fastapi import HTTPException
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -179,15 +180,15 @@ def analyze_metadata(meta: dict) -> tuple:
 # Gemini Fallback
 # ─────────────────────────────────────────────
 
-async def _gemini_fallback(image_bytes: bytes, filename: str) -> Optional[dict]:
+async def _gemini_fallback(image_bytes: bytes, filename: str) -> tuple:
     """
     Call Gemini vision model to determine if image is AI-generated.
     Used when local forensics yields ESCALATE (inconclusive) result.
-    Returns dict or None on failure.
+    Returns (result_dict, None) on success or (None, error_message) on failure.
     """
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("EMERGENT_LLM_KEY")
     if not api_key:
-        return None
+        return None, "Gemini API key is not configured."
 
     ext = Path(filename).suffix.lower() or ".jpg"
     mime_map = {
@@ -202,7 +203,6 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> Optional[dict]:
             LlmChat, UserMessage, FileContentWithMimeType, TextDelta, StreamDone
         )
 
-        # Write image bytes to a temp file
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
             f.write(image_bytes)
             tmp_path = f.name
@@ -214,7 +214,7 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> Optional[dict]:
                 "You are a forensic image analyst specializing in detecting AI-generated images. "
                 "Always respond with only valid JSON."
             ),
-        ).with_model("gemini", "gemini-2.5-flash")
+        ).with_model("gemini", "gemini-2.5-flash-lite")
 
         image_file = FileContentWithMimeType(file_path=tmp_path, mime_type=mime_type)
 
@@ -243,16 +243,24 @@ async def _gemini_fallback(image_bytes: bytes, filename: str) -> Optional[dict]:
                 "is_ai_generated": bool(parsed.get("is_ai_generated", False)),
                 "confidence": float(parsed.get("confidence", 0.5)),
                 "reasoning": str(parsed.get("reasoning", "Gemini analysis complete.")),
-                "model": "gemini-2.5-flash",
-            }
+                "model": "gemini-2.5-flash-lite",
+            }, None
+
+        return None, "Gemini returned an unreadable response. Please try again."
 
     except Exception as e:
+        raw = str(e).lower()
+        # Detect quota / billing exhaustion
+        if any(kw in raw for kw in ["quota", "resource_exhausted", "rate limit", "billing", "insufficient funds"]):
+            return None, "Your Gemini API key quota is exhausted. Please top up your key or replace it."
+        # Detect invalid/expired key
+        if any(kw in raw for kw in ["authenticationerror", "api_key_invalid", "api key not valid", "invalid api key", "401", "403"]):
+            return None, "Your Gemini API key is invalid or expired. Please replace it."
         print(f"[Gemini fallback error]: {e}")
+        return None, "Gemini verification is temporarily unavailable. Please try again shortly."
     finally:
         if tmp_path:
             Path(tmp_path).unlink(missing_ok=True)
-
-    return None
 
 
 # ─────────────────────────────────────────────
@@ -362,7 +370,7 @@ async def run_verification(
 
     # ── Gemini fallback on ESCALATE ─────────────────────────
     if verdict == "ESCALATE":
-        gemini = await _gemini_fallback(image_bytes, filename)
+        gemini, gemini_error = await _gemini_fallback(image_bytes, filename)
         if gemini:
             gemini_used = True
             if gemini["is_ai_generated"]:
@@ -376,6 +384,12 @@ async def run_verification(
 
             forensics_json["gemini_analysis"] = gemini
             forensics_json["model"] = f"local-forensic-v1 + {gemini['model']} (fallback)"
+        else:
+            # Gemini needed but failed — do NOT return an unverified result
+            raise HTTPException(
+                status_code=503,
+                detail=gemini_error or "Verification requires Gemini AI but it is unavailable. Please try again.",
+            )
 
     latency_ms = round((time.time() - t0) * 1000)
 
