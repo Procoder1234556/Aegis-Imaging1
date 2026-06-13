@@ -1,0 +1,44 @@
+/* App.css - Global component overrides */
+
+/* Recharts customization */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #E2E8F0;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+.recharts-default-tooltip {
+  border-radius: 12px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08) !important;
+}
+
+/* Custom scrollbar in code blocks */
+.json-viewer {
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #E2E8F0 transparent;
+}
+
+/* Drop zone active state */
+.dropzone-active {
+  border-color: #2E5C8A !important;
+  background: rgba(46, 92, 138, 0.04) !important;
+}
+
+/* Heatmap overlay */
+.heatmap-container {
+  position: relative;
+  display: inline-block;
+}
+
+.heatmap-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+}
